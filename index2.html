@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Plantões Médicos</title>
+    <style>
+        /* Variáveis CSS */
+        :root {
+            --cor-primaria: #4CAF50;
+            --cor-secundaria: #1976D2;
+            --cor-erro: #f44336;
+            --cor-sucesso: #4CAF50;
+            --cor-alerta: #FFC107;
+            --sombra-padrao: 0 0 10px rgba(0,0,0,0.1);
+            --borda-padrao: 1px solid #ddd;
+            --radius-padrao: 8px;
+            --padding-container: 20px;
+        }
+
+        /* Reset e Estilos Gerais */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: var(--padding-container);
+            border-radius: var(--radius-padrao);
+            box-shadow: var(--sombra-padrao);
+        }
+
+        h1, h2, h3 {
+            color: var(--cor-primaria);
+            margin-bottom: 1rem;
+        }
+
+        /* Formulários */
+        form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: var(--borda-padrao);
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--cor-primaria);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Botões */
+        button {
+            background-color: var(--cor-primaria);
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            background-color: #3d8b40;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background-color: #607d8b;
+        }
+
+        button.danger {
+            background-color: var(--cor-erro);
+        }
+
+        button svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* Layout */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        /* Calendário */
+        #calendar {
+            width: 100%;
+            height: auto;
+            min-height: 500px;
+            margin-top: 20px;
+            z-index: 1;
+        }
+
+        /* Mensagens */
+        .mensagem {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mensagem.sucesso {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid var(--cor-sucesso);
+        }
+
+        .mensagem.erro {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid var(--cor-erro);
+        }
+
+        .mensagem.info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid var(--cor-secundaria);
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--cor-primaria);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: var(--radius-padrao);
+            box-shadow: var(--sombra-padrao);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #777;
+        }
+
+        /* Página inicial */
+        #inicio {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            padding: 40px 0;
+        }
+
+        .main-btns {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .main-btns button {
+            min-width: 220px;
+            font-size: 18px;
+            padding: 20px;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Tabelas */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: var(--borda-padrao);
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            :root {
+                --padding-container: 15px;
+            }
+
+            form {
+                grid-template-columns: 1fr;
+            }
+
+            .main-btns {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .main-btns button {
+                width: 100%;
+            }
+
+            #calendar {
+                height: 400px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                --padding-container: 10px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            h2 {
+                font-size: 20px;
+            }
+
+            button {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+        }
+
+        /* Tela de Login */
+        #login {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+        }
+
+        .login-box {
+            background: white;
+            padding: 32px;
+            border-radius: var(--radius-padrao);
+            box-shadow: var(--sombra-padrao);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: var(--cor-primaria);
+        }
+
+        .login-box button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-logo svg {
+            width: 80px;
+            height: 80px;
+            fill: var(--cor-primaria);
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
+</head>
+<body>
+    <!-- Tela de Login -->
+    <div id="login">
+        <div class="login-box">
+            <div class="login-logo">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-9.5-4H11v-4.5h1V12h-3.5v1.5h2.5V15zm-1-7.5h1.5V9h1V7.5H13v-1h-3v1.5h1V7.5zm6 4.5h-1.5v1.5H15V16h-3v-1.5h1.5v-1H12v-3h3v1.5h-1.5V12H18zm-6-1.5V9h3v1.5h-1.5V12H12v-1.5z"/>
+                </svg>
+            </div>
+            <h2>Controle de Plantões</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">E-mail:</label>
+                    <input type="email" id="loginEmail" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="loginSenha">Senha:</label>
+                    <input type="password" id="loginSenha" required autocomplete="current-password">
+                </div>
+                <button type="submit">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                    Entrar
+                </button>
+            </form>
+            <div id="loginErro" class="mensagem erro" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- App principal -->
+    <div class="container" style="display:none;">
+        <!-- Loader -->
+        <div id="loader" class="loader"></div>
+        
+        <!-- Mensagens -->
+        <div id="mensagemContainer" style="display: none;"></div>
+
+        <!-- Página Inicial -->
+        <div id="inicio" style="display:none;">
+            <h2>Bem-vindo! O que deseja fazer?</h2>
+            <div class="main-btns">
+                <button onclick="mostrarSecao('cadastro')" title="Cadastrar Novo Plantão">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    <span>Cadastrar Plantão</span>
+                </button>
+                <button onclick="mostrarSecao('calendario')" title="Ver Calendário">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"/>
+                    </svg>
+                    <span>Calendário</span>
+                </button>
+                <button onclick="mostrarSecao('resumo')" title="Resumo Financeiro">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                    </svg>
+                    <span>Resumo Financeiro</span>
+                </button>
+            </div>
+            <button onclick="logout()" class="secondary" style="margin-top: 30px;">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                </svg>
+                Sair
+            </button>
+        </div>
+        
+        <!-- Seção de Cadastro -->
+        <div id="cadastro" style="display:none;">
+            <button onclick="mostrarSecao('inicio')" class="secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                Voltar
+            </button>
+            <h2 id="tituloCadastro">Cadastrar Novo Plantão</h2>
+            <form id="plantaoForm">
+                <div class="form-group">
+                    <label for="data">Data:</label>
+                    <input type="date" id="data" required>
+                </div>
+                <div class="form-group">
+                    <label for="horaInicio">Hora de Início:</label>
+                    <input type="time" id="horaInicio" required>
+                </div>
+                <div class="form-group">
+                    <label for="tempoPlantao">Tempo de Plantão (horas):</label>
+                    <input type="number" id="tempoPlantao" step="0.1" min="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label for="local">Local:</label>
+                    <select id="local" required>
+                        <option value="">Selecione...</option>
+                        <option value="Intermedica Diadema">Intermedica Diadema</option>
+                        <option value="Beneficência Portuguesa SC">Beneficência Portuguesa SC</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <div class="form-group" id="outroLocalGroup" style="display:none;">
+                    <label for="outroLocal">Especificar Local:</label>
+                    <input type="text" id="outroLocal">
+                </div>
+                <div class="form-group">
+                    <label for="valorHora">Valor por Hora (R$):</label>
+                    <input type="number" id="valorHora" step="0.01" min="0" required>
+                </div>
+                <div class="form-group flex-row">
+                    <input type="checkbox" id="valorCheioCheck" style="width:auto;">
+                    <label for="valorCheioCheck" style="margin:0;">Informar valor cheio do plantão</label>
+                </div>
+                <div class="form-group" id="valorCheioGroup" style="display:none;">
+                    <label for="valorCheio">Valor Cheio do Plantão (R$):</label>
+                    <input type="number" id="valorCheio" step="0.01" min="0">
+                </div>
+                <div class="form-group full-width">
+                    <label for="observacoes">Observações:</label>
+                    <textarea id="observacoes" placeholder="Informações adicionais sobre o plantão"></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <button type="submit" id="btnSalvarPlantao">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                        </svg>
+                        Salvar Plantão
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Seção de Calendário -->
+        <div id="calendario" style="display:none;">
+            <button onclick="mostrarSecao('inicio')" class="secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                Voltar
+            </button>
+            <h2>Calendário de Plantões</h2>
+            <div id="calendar"></div>
+        </div>
+        
+        <!-- Seção de Resumo Financeiro -->
+        <div id="resumo" style="display:none;">
+            <button onclick="mostrarSecao('inicio')" class="secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                Voltar
+            </button>
+            <h2>Resumo Financeiro Mensal</h2>
+            <div class="summary-header">
+                <div class="form-group">
+                    <label for="mesResumo">Mês:</label>
+                    <select id="mesResumo">
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="anoResumo">Ano:</label>
+                    <select id="anoResumo">
+                        <option value="2023">2023</option>
+                        <option value="2024" selected>2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filtroLocal">Local:</label>
+                    <select id="filtroLocal">
+                        <option value="todos">Todos</option>
+                        <option value="Intermedica Diadema">Intermedica Diadema</option>
+                        <option value="Beneficência Portuguesa SC">Beneficência Portuguesa SC</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                <button onclick="filtrarResumo()">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
+                    </svg>
+                    Filtrar
+                </button>
+                <button onclick="exportarResumo()" class="secondary" style="grid-column: 1 / -1;">
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                    Exportar para CSV
+                </button>
+            </div>
+            <div id="resumoContent">
+                <p>Selecione um período para visualizar o resumo.</p>
+            </div>
+            <div id="graficoResumo" style="height: 300px; margin-top: 30px;"></div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="fecharModal()">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Bibliotecas -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/locale/pt-br.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPCsCD_UwBk_c4weCgTi8r0JyhdQThrZQ",
+            authDomain: "mywebshift.firebaseapp.com",
+            projectId: "mywebshift",
+            storageBucket: "mywebshift.appspot.com",
+            messagingSenderId: "994220258656",
+            appId: "1:994220258656:web:4686ab749f948e3ae19a05",
+            measurementId: "G-LF8XYGQ7M2"
+        };
+
+        // Inicialização do Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Variáveis globais
+        let plantaoEditandoId = null;
+        let chartResumo = null;
+        let cachePlantoes = null;
+
+        // Objeto com as funções de utilidade
+        const utils = {
+            mostrarLoader: function(mostrar) {
+                document.getElementById('loader').style.display = mostrar ? 'block' : 'none';
+            },
+            
+            mostrarMensagem: function(tipo, mensagem, tempo = 5000) {
+                const container = document.getElementById('mensagemContainer');
+                const div = document.createElement('div');
+                div.className = `mensagem ${tipo}`;
+                
+                // Ícone baseado no tipo
+                let iconPath = '';
+                if (tipo === 'sucesso') {
+                    iconPath = '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>';
+                } else if (tipo === 'erro') {
+                    iconPath = '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>';
+                } else {
+                    iconPath = '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+                }
+                
+                div.innerHTML = `${iconPath} ${mensagem}`;
+                container.appendChild(div);
+                container.style.display = 'block';
+                
+                // Remove a mensagem após o tempo especificado
+                setTimeout(() => {
+                    div.remove();
+                    if (container.children.length === 0) {
+                        container.style.display = 'none';
+                    }
+                }, tempo);
+            },
+            
+            formatarMoeda: function(valor) {
+                return new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(valor);
+            },
+            
+            formatarData: function(dataStr) {
+                return moment(dataStr).format('DD/MM/YYYY');
+            },
+            
+            debounce: function(func, wait) {
+                let timeout;
+                return function() {
+                    const context = this, args = arguments;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), wait);
+                };
+            }
+        };
+
+        // Funções de navegação e UI
+        function mostrarSecao(secao) {
+            // Esconde todas as seções
+            document.getElementById('inicio').style.display = 'none';
+            document.getElementById('cadastro').style.display = 'none';
+            document.getElementById('calendario').style.display = 'none';
+            document.getElementById('resumo').style.display = 'none';
+            
+            // Mostra a seção solicitada
+            if (secao === 'inicio') {
+                document.getElementById('inicio').style.display = 'flex';
+                plantaoEditandoId = null;
+                document.getElementById('tituloCadastro').textContent = 'Cadastrar Novo Plantão';
+            } else if (secao === 'cadastro') {
+                document.getElementById('cadastro').style.display = 'block';
+            } else if (secao === 'calendario') {
+                document.getElementById('calendario').style.display = 'block';
+                if (window.atualizarCalendario) {
+                    window.atualizarCalendario();
+                }
+            } else if (secao === 'resumo') {
+                document.getElementById('resumo').style.display = 'block';
+                filtrarResumo();
+            }
+        }
+
+        function mostrarAppLogado(logado) {
+            document.getElementById('login').style.display = logado ? 'none' : 'flex';
+            document.querySelector('.container').style.display = logado ? 'block' : 'none';
+            if (logado) {
+                mostrarSecao('inicio');
+                utils.mostrarMensagem('sucesso', 'Login realizado com sucesso!');
+            }
+        }
+
+        // Funções de autenticação
+        function logout() {
+            auth.signOut()
+                .then(() => utils.mostrarMensagem('sucesso', 'Logout realizado com sucesso!'))
+                .catch(error => utils.mostrarMensagem('erro', 'Erro ao fazer logout: ' + error.message));
+        }
+
+        // Event listeners
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const senha = document.getElementById('loginSenha').value;
+            const erroDiv = document.getElementById('loginErro');
+            
+            erroDiv.style.display = 'none';
+            utils.mostrarLoader(true);
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, senha);
+            } catch (error) {
+                erroDiv.textContent = 'E-mail ou senha inválidos.';
+                erroDiv.style.display = 'block';
+                utils.mostrarMensagem('erro', 'Falha no login. Verifique suas credenciais.');
+            } finally {
+                utils.mostrarLoader(false);
+            }
+        });
+
+        // Verifica estado de autenticação
+        auth.onAuthStateChanged(function(user) {
+            mostrarAppLogado(!!user);
+        });
+
+        // Funções de plantões
+        async function buscarPlantoes(forceRefresh = false) {
+            const user = auth.currentUser;
+            if (!user) return [];
+            
+            // Usar cache se disponível e não for forçado refresh
+            if (cachePlantoes && !forceRefresh) return cachePlantoes;
+            
+            utils.mostrarLoader(true);
+            try {
+                const snapshot = await db.collection("plantoes")
+                    .where("userId", "==", user.uid)
+                    .orderBy("data", "desc")
+                    .get();
+                
+                cachePlantoes = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        valorTotal: data.valorTotal || (Number(data.valorHora) * Number(data.tempoPlantao))
+                    };
+                });
+                
+                return cachePlantoes;
+            } catch (error) {
+                console.error("Erro ao buscar plantões:", error);
+                utils.mostrarMensagem('erro', 'Erro ao carregar plantões.');
+                return [];
+            } finally {
+                utils.mostrarLoader(false);
+            }
+        }
+
+        async function salvarPlantao(plantaoData, isEdicao = false, id = null) {
+            const user = auth.currentUser;
+            if (!user) {
+                utils.mostrarMensagem('erro', 'Usuário não autenticado!');
+                return;
+            }
+            
+            // Validações
+            if (!plantaoData.data || !plantaoData.horaInicio || !plantaoData.tempoPlantao || !plantaoData.local) {
+                utils.mostrarMensagem('erro', 'Preencha todos os campos obrigatórios!');
+                return;
+            }
+            
+            // Se for "Outro" local, usa o valor do campo outroLocal
+            if (plantaoData.local === "Outro" && plantaoData.outroLocal) {
+                plantaoData.local = plantaoData.outroLocal;
+            }
+            
+            // Calcula valor total se não foi informado
+            if (!plantaoData.valorTotal) {
+                plantaoData.valorTotal = Number(plantaoData.valorHora) * Number(plantaoData.tempoPlantao);
+            }
+            
+            plantaoData.userId = user.uid;
+            plantaoData.dataHora = new Date(`${plantaoData.data}T${plantaoData.horaInicio}`);
+            
+            utils.mostrarLoader(true);
+            try {
+                if (isEdicao && id) {
+                    await db.collection("plantoes").doc(id).update(plantaoData);
+                    utils.mostrarMensagem('sucesso', 'Plantão atualizado com sucesso!');
+                } else {
+                    await db.collection("plantoes").add(plantaoData);
+                    utils.mostrarMensagem('sucesso', 'Plantão cadastrado com sucesso!');
+                }
+                
+                // Limpa cache e formulário
+                cachePlantoes = null;
+                limparFormulario();
+                mostrarSecao('calendario');
+                
+                // Atualiza calendário se estiver visível
+                if (window.atualizarCalendario) {
+                    window.atualizarCalendario();
+                }
+            } catch (error) {
+                console.error("Erro ao salvar plantão:", error);
+                utils.mostrarMensagem('erro', 'Erro ao salvar plantão: ' + error.message);
+            } finally {
+                utils.mostrarLoader(false);
+            }
+        }
+
+        function limparFormulario() {
+            document.getElementById('plantaoForm').reset();
+            document.getElementById('valorCheioGroup').style.display = 'none';
+            document.getElementById('outroLocalGroup').style.display = 'none';
+            document.getElementById('valorHora').disabled = false;
+            plantaoEditandoId = null;
+            document.getElementById('tituloCadastro').textContent = 'Cadastrar Novo Plantão';
+        }
+
+        // Formulário de plantão
+        document.getElementById('plantaoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const plantaoData = {
+                data: document.getElementById('data').value,
+                horaInicio: document.getElementById('horaInicio').value,
+                tempoPlantao: document.getElementById('tempoPlantao').value,
+                local: document.getElementById('local').value,
+                outroLocal: document.getElementById('outroLocal').value,
+                valorHora: document.getElementById('valorHora').value,
+                observacoes: document.getElementById('observacoes').value
+            };
+            
+            // Verifica se está usando valor cheio
+            const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
+            if (valorCheioCheck) {
+                plantaoData.valorCheio = document.getElementById('valorCheio').value;
+                plantaoData.valorTotal = Number(document.getElementById('valorCheio').value);
+            }
+            
+            salvarPlantao(plantaoData, !!plantaoEditandoId, plantaoEditandoId);
+        });
+
+        // Calendário
+        $(document).ready(function() {
+            $('#calendar').fullCalendar({
+                locale: 'pt-br',
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,agendaWeek,agendaDay'
+                },
+                defaultView: 'month',
+                editable: false,
+                eventLimit: true,
+                events: [],
+                eventRender: function(event, element) {
+                    element.attr('title', `${event.local}\nValor: ${utils.formatarMoeda(event.total)}`);
+                    element.tooltip({
+                        container: 'body',
+                        placement: 'top'
+                    });
+                },
+                eventClick: function(calEvent) {
+                    abrirModalPlantao(calEvent);
+                }
+            });
+            
+            // Redimensionamento responsivo
+            $(window).on('resize', utils.debounce(function() {
+                $('#calendar').fullCalendar('option', 'height', $(window).height() - 200);
+            }, 200)).trigger('resize');
+        });
+
+        // Função global para atualizar o calendário
+        window.atualizarCalendario = async function() {
+            const eventos = await buscarPlantoes();
+            const eventosFormatados = eventos.map(p => ({
+                id: p.id,
+                title: `Plantão - ${p.local}`,
+                start: `${p.data}T${p.horaInicio}`,
+                end: moment(`${p.data}T${p.horaInicio}`).add(Number(p.tempoPlantao), 'hours').format('YYYY-MM-DDTHH:mm'),
+                local: p.local,
+                valorHora: p.valorHora,
+                horas: p.tempoPlantao,
+                total: p.valorTotal,
+                observacoes: p.observacoes,
+                color: p.local.includes('Intermedica') ? '#4CAF50' : '#2196F3'
+            }));
+            
+            $('#calendar').fullCalendar('removeEvents');
+            $('#calendar').fullCalendar('addEventSource', eventosFormatados);
+        };
+
+        // Modal de plantão
+        function abrirModalPlantao(plantao) {
+            const modalContent = `
+                <h3>Detalhes do Plantão</h3>
+                <p><strong>Local:</strong> ${plantao.local}</p>
+                <p><strong>Data:</strong> ${utils.formatarData(plantao.start)}</p>
+                <p><strong>Horário:</strong> ${moment(plantao.start).format('HH:mm')} - ${moment(plantao.end).format('HH:mm')}</p>
+                <p><strong>Duração:</strong> ${plantao.horas} horas</p>
+                <p><strong>Valor por hora:</strong> ${utils.formatarMoeda(plantao.valorHora)}</p>
+                <p><strong>Valor total:</strong> ${utils.formatarMoeda(plantao.total)}</p>
+                ${plantao.observacoes ? `<p><strong>Observações:</strong> ${plantao.observacoes}</p>` : ''}
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button onclick="editarPlantao('${plantao.id}')" class="secondary">Editar</button>
+                    <button onclick="excluirPlantao('${plantao.id}')" class="danger">Excluir</button>
+                </div>
+            `;
+            
+            document.getElementById('modalContent').innerHTML = modalContent;
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function fecharModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        async function editarPlantao(id) {
+            fecharModal();
+            plantaoEditandoId = id;
+            
+            const plantoes = await buscarPlantoes();
+            const plantao = plantoes.find(p => p.id === id);
+            
+            if (!plantao) {
+                utils.mostrarMensagem('erro', 'Plantão não encontrado!');
+                return;
+            }
+            
+            // Preenche o formulário
+            document.getElementById('data').value = plantao.data;
+            document.getElementById('horaInicio').value = plantao.horaInicio;
+            document.getElementById('tempoPlantao').value = plantao.tempoPlantao;
+            document.getElementById('valorHora').value = plantao.valorHora;
+            document.getElementById('observacoes').value = plantao.observacoes || '';
+            
+            // Verifica se é um local padrão ou "Outro"
+            const locaisPadrao = ['Intermedica Diadema', 'Beneficência Portuguesa SC'];
+            if (locaisPadrao.includes(plantao.local)) {
+                document.getElementById('local').value = plantao.local;
+                document.getElementById('outroLocalGroup').style.display = 'none';
+            } else {
+                document.getElementById('local').value = 'Outro';
+                document.getElementById('outroLocal').value = plantao.local;
+                document.getElementById('outroLocalGroup').style.display = 'block';
+            }
+            
+            // Verifica se tem valor cheio
+            if (plantao.valorCheio) {
+                document.getElementById('valorCheioCheck').checked = true;
+                document.getElementById('valorCheio').value = plantao.valorCheio;
+                document.getElementById('valorCheioGroup').style.display = 'block';
+                document.getElementById('valorHora').disabled = true;
+            } else {
+                document.getElementById('valorCheioCheck').checked = false;
+                document.getElementById('valorCheioGroup').style.display = 'none';
+                document.getElementById('valorHora').disabled = false;
+            }
+            
+            document.getElementById('tituloCadastro').textContent = 'Editar Plantão';
+            mostrarSecao('cadastro');
+        }
+
+        async function excluirPlantao(id) {
+            if (!confirm('Tem certeza que deseja excluir este plantão?')) return;
+            
+            utils.mostrarLoader(true);
+            try {
+                await db.collection("plantoes").doc(id).delete();
+                utils.mostrarMensagem('sucesso', 'Plantão excluído com sucesso!');
+                fecharModal();
+                cachePlantoes = null;
+                
+                // Atualiza calendário se estiver visível
+                if (window.atualizarCalendario) {
+                    window.atualizarCalendario();
+                }
+                
+                // Atualiza resumo se estiver visível
+                if (document.getElementById('resumo').style.display === 'block') {
+                    filtrarResumo();
+                }
+            } catch (error) {
+                console.error("Erro ao excluir plantão:", error);
+                utils.mostrarMensagem('erro', 'Erro ao excluir plantão: ' + error.message);
+            } finally {
+                utils.mostrarLoader(false);
+            }
+        }
+
+        // Resumo financeiro
+        async function filtrarResumo() {
+            const mes = document.getElementById('mesResumo').value.padStart(2, '0');
+            const ano = document.getElementById('anoResumo').value;
+            const filtroLocal = document.getElementById('filtroLocal').value;
+            const resumoContent = document.getElementById('resumoContent');
+            
+            resumoContent.innerHTML = '<p>Carregando...</p>';
+            utils.mostrarLoader(true);
+            
+            try {
+                const plantoes = await buscarPlantoes();
+                const plantoesFiltrados = plantoes.filter(p => {
+                    // Filtra por mês/ano
+                    if (!p.data || !p.data.startsWith(`${ano}-${mes}`)) return false;
+                    
+                    // Filtra por local se não for "todos"
+                    if (filtroLocal !== 'todos') {
+                        if (filtroLocal === 'Outro') {
+                            const locaisPadrao = ['Intermedica Diadema', 'Beneficência Portuguesa SC'];
+                            return !locaisPadrao.includes(p.local);
+                        }
+                        return p.local === filtroLocal;
+                    }
+                    
+                    return true;
+                });
+                
+                if (plantoesFiltrados.length === 0) {
+                    resumoContent.innerHTML = '<p>Nenhum plantão encontrado para o período selecionado.</p>';
+                    atualizarGrafico([]);
+                    return;
+                }
+                
+                // Agrupa por local
+                const resumoPorLocal = {};
+                plantoesFiltrados.forEach(p => {
+                    if (!resumoPorLocal[p.local]) {
+                        resumoPorLocal[p.local] = {
+                            horas: 0,
+                            valor: 0,
+                            plantoes: []
+                        };
+                    }
+                    
+                    const horas = Number(p.tempoPlantao) || 0;
+                    const valorTotal = p.valorTotal || (Number(p.valorHora) * horas);
+                    
+                    resumoPorLocal[p.local].horas += horas;
+                    resumoPorLocal[p.local].valor += valorTotal;
+                    resumoPorLocal[p.local].plantoes.push({
+                        ...p,
+                        valorTotal
+                    });
+                });
+                
+                // Ordena por valor total (decrescente)
+                const locaisOrdenados = Object.keys(resumoPorLocal).sort((a, b) => {
+                    return resumoPorLocal[b].valor - resumoPorLocal[a].valor;
+                });
+                
+                // Gera HTML do resumo
+                let html = '';
+                let totalGeralHoras = 0;
+                let totalGeralValor = 0;
+                
+                locaisOrdenados.forEach(local => {
+                    const { horas, valor, plantoes } = resumoPorLocal[local];
+                    totalGeralHoras += horas;
+                    totalGeralValor += valor;
+                    
+                    html += `
+                        <div class="summary-item">
+                            <h3>${local}</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Dia</th>
+                                        <th>Hora</th>
+                                        <th>Horas</th>
+                                        <th>Valor/Hora</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${plantoes.map(p => `
+                                        <tr>
+                                            <td>${utils.formatarData(p.data)}</td>
+                                            <td>${p.horaInicio}</td>
+                                            <td>${p.tempoPlantao}</td>
+                                            <td>${utils.formatarMoeda(p.valorHora)}</td>
+                                            <td>${utils.formatarMoeda(p.valorTotal)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                            <div style="margin-top: 10px; font-weight: bold;">
+                                <p>Total de horas: ${horas.toFixed(1)}</p>
+                                <p>Valor total: ${utils.formatarMoeda(valor)}</p>
+                            </div>
+                        </div>
+                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    `;
+                });
+                
+                // Adiciona total geral
+                html += `
+                    <div style="margin-top: 20px; padding: 15px; background-color: #f5f5f5; border-radius: 4px;">
+                        <h3>Resumo Geral</h3>
+                        <p><strong>Total de horas:</strong> ${totalGeralHoras.toFixed(1)}</p>
+                        <p><strong>Valor total:</strong> ${utils.formatarMoeda(totalGeralValor)}</p>
+                        <p><strong>Média por hora:</strong> ${utils.formatarMoeda(totalGeralValor / totalGeralHoras)}</p>
+                    </div>
+                `;
+                
+                resumoContent.innerHTML = html;
+                atualizarGrafico(locaisOrdenados.map(local => ({
+                    local,
+                    valor: resumoPorLocal[local].valor
+                })));
+                
+            } catch (error) {
+                console.error("Erro ao filtrar resumo:", error);
+                resumoContent.innerHTML = '<p class="mensagem erro">Erro ao carregar resumo.</p>';
+            } finally {
+                utils.mostrarLoader(false);
+            }
+        }
+
+        function atualizarGrafico(dados) {
+            const ctx = document.getElementById('graficoResumo').getContext('2d');
+            
+            // Destrói o gráfico anterior se existir
+            if (chartResumo) {
+                chartResumo.destroy();
+            }
+            
+            if (dados.length === 0) {
+                document.getElementById('graficoResumo').innerHTML = '<p>Não há dados para exibir o gráfico.</p>';
+                return;
+            }
+            
+            chartResumo = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: dados.map(item => item.local),
+                    datasets: [{
+                        label: 'Valor Total (R$)',
+                        data: dados.map(item => item.valor),
+                        backgroundColor: [
+                            'rgba(76, 175, 80, 0.7)',
+                            'rgba(33, 150, 243, 0.7)',
+                            'rgba(255, 193, 7, 0.7)',
+                            'rgba(156, 39, 176, 0.7)',
+                            'rgba(244, 67, 54, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(76, 175, 80, 1)',
+                            'rgba(33, 150, 243, 1)',
+                            'rgba(255, 193, 7, 1)',
+                            'rgba(156, 39, 176, 1)',
+                            'rgba(244, 67, 54, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return utils.formatarMoeda(value);
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return utils.formatarMoeda(context.raw);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportarResumo() {
+            const mes = document.getElementById('mesResumo').value;
+            const ano = document.getElementById('anoResumo').value;
+            const mesNome = document.getElementById('mesResumo').options[document.getElementById('mesResumo').selectedIndex].text;
+            
+            // Pega o conteúdo da tabela
+            const tables = document.querySelectorAll('#resumoContent table');
+            if (tables.length === 0) {
+                utils.mostrarMensagem('info', 'Nenhum dado para exportar.');
+                return;
+            }
+            
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `Resumo de Plantões - ${mesNome}/${ano}\n\n`;
+            
+            tables.forEach(table => {
+                const local = table.closest('.summary-item').querySelector('h3').textContent;
+                csvContent += `${local}\n`;
+                
+                // Cabeçalhos
+                const headers = [];
+                table.querySelectorAll('thead th').forEach(th => {
+                    headers.push(th.textContent);
+                });
+                csvContent += headers.join(';') + '\n';
+                
+                // Dados
+                table.querySelectorAll('tbody tr').forEach(tr => {
+                    const row = [];
+                    tr.querySelectorAll('td').forEach(td => {
+                        row.push(td.textContent);
+                    });
+                    csvContent += row.join(';') + '\n';
+                });
+                
+                csvContent += '\n';
+            });
+            
+            // Cria link de download
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', `resumo_plantões_${mes}_${ano}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Interações do formulário
+        document.getElementById('local').addEventListener('change', function() {
+            document.getElementById('outroLocalGroup').style.display = this.value === 'Outro' ? 'block' : 'none';
+            atualizarValorHora();
+        });
+
+        document.getElementById('valorCheioCheck').addEventListener('change', function() {
+            const valorCheioGroup = document.getElementById('valorCheioGroup');
+            const valorHoraInput = document.getElementById('valorHora');
+            
+            valorCheioGroup.style.display = this.checked ? 'block' : 'none';
+            valorHoraInput.disabled = this.checked;
+            
+            if (!this.checked) {
+                document.getElementById('valorCheio').value = '';
+                atualizarValorHora();
+            }
+        });
+
+        document.getElementById('valorCheio').addEventListener('input', function() {
+            const tempo = parseFloat(document.getElementById('tempoPlantao').value);
+            const valorCheio = parseFloat(this.value);
+            const valorHoraInput = document.getElementById('valorHora');
+            
+            if (!isNaN(tempo) && tempo > 0 && !isNaN(valorCheio) && valorCheio > 0) {
+                valorHoraInput.value = (valorCheio / tempo).toFixed(2);
+            }
+        });
+
+        document.getElementById('tempoPlantao').addEventListener('input', function() {
+            if (document.getElementById('valorCheioCheck').checked) {
+                const valorCheio = parseFloat(document.getElementById('valorCheio').value);
+                const tempo = parseFloat(this.value);
+                const valorHoraInput = document.getElementById('valorHora');
+                
+                if (!isNaN(tempo) && tempo > 0 && !isNaN(valorCheio) && valorCheio > 0) {
+                    valorHoraInput.value = (valorCheio / tempo).toFixed(2);
+                }
+            }
+        });
+
+        function atualizarValorHora() {
+            const data = document.getElementById('data').value;
+            const local = document.getElementById('local').value;
+            const valorHoraInput = document.getElementById('valorHora');
+            
+            if (!data || !local || document.getElementById('valorCheioCheck').checked) {
+                return;
+            }
+            
+            const partes = data.split('-');
+            const dataObj = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+            const diaSemana = dataObj.getDay();
+            const isFimDeSemana = diaSemana === 0 || diaSemana === 6;
+            
+            let valor = '';
+            if (local === 'Intermedica Diadema') {
+                valor = isFimDeSemana ? 125 : 114;
+            } else if (local === 'Beneficência Portuguesa SC') {
+                valor = isFimDeSemana ? 135 : 125;
+            }
+            
+            if (valor) {
+                valorHoraInput.value = valor;
+            }
+        }
+
+        document.getElementById('data').addEventListener('change', atualizarValorHora);
+
+        // Inicializa o mês atual no filtro
+        document.getElementById('mesResumo').value = new Date().getMonth() + 1;
+    </script>
+</body>
+</html>
