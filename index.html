@@ -130,15 +130,63 @@
                 padding: 12px 10px;
             }
         }
+
+        /* Estilos para a tela de login */
+        #login {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        #login div {
+            background: white;
+            padding: 32px 24px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.08);
+            min-width: 320px;
+        }
+        #login h2 {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        #login button {
+            width: 100%;
+        }
+        #loginErro {
+            color: red;
+            margin-top: 12px;
+            text-align: center;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
 </head>
 <body>
-    <div class="container">
+    <!-- Tela de Login (fora da .container) -->
+    <div id="login" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh;">
+        <div style="background:white; padding:32px 24px; border-radius:8px; box-shadow:0 0 10px rgba(0,0,0,0.08); min-width:320px;">
+            <h2 style="text-align:center; margin-bottom:24px;">Login</h2>
+            <form id="loginForm">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label for="loginEmail">E-mail:</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group" style="margin-bottom:24px;">
+                    <label for="loginSenha">Senha:</label>
+                    <input type="password" id="loginSenha" required>
+                </div>
+                <button type="submit" style="width:100%;">Entrar</button>
+            </form>
+            <div id="loginErro" style="color:red; margin-top:12px; text-align:center;"></div>
+        </div>
+    </div>
+
+    <!-- App principal -->
+    <div class="container" style="display:none;">
         <h1>Controle de Plantões Médicos</h1>
         
         <!-- Página Inicial -->
-        <div id="inicio">
+        <div id="inicio" style="display:none;">
             <h2>Bem-vindo! O que deseja fazer?</h2>
             <div class="main-btns">
                 <button onclick="mostrarSecao('cadastro')" title="Cadastrar Novo Plantão" style="display: flex; flex-direction: column; align-items: center;">
@@ -172,6 +220,7 @@
                     <span style="margin-top:8px;">Resumo</span>
                 </button>
             </div>
+            <button onclick="firebase.auth().signOut()" style="float:right; margin-top:-10px;">Sair</button>
         </div>
         
         <!-- Seção de Cadastro -->
@@ -264,6 +313,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script>
         // Função para navegação entre seções
         function mostrarSecao(secao) {
@@ -295,6 +345,21 @@
         firebase.initializeApp(firebaseConfig);
         firebase.analytics();
         const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Controle de exibição: só mostra o app se estiver logado
+        function mostrarAppLogado(logado) {
+            document.getElementById('login').style.display = logado ? 'none' : 'flex';
+            document.querySelector('.container').style.display = logado ? 'block' : 'none';
+            if (logado) {
+                mostrarSecao('inicio');
+            }
+        }
+
+        // Verifica se está logado ao carregar
+        auth.onAuthStateChanged(function(user) {
+            mostrarAppLogado(!!user);
+        });
 
         // Função para buscar plantões do Firestore e formatar para o calendário
         async function buscarPlantoes() {
@@ -424,6 +489,21 @@
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
                 alert("Erro ao salvar plantão.");
+            }
+        });
+
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const senha = document.getElementById('loginSenha').value;
+            const erroDiv = document.getElementById('loginErro');
+            erroDiv.textContent = '';
+            try {
+                await auth.signInWithEmailAndPassword(email, senha);
+                // O onAuthStateChanged já cuida da navegação
+            } catch (error) {
+                erroDiv.textContent = 'E-mail ou senha inválidos.';
             }
         });
     </script>
