@@ -369,7 +369,9 @@
 
         // Função para buscar plantões do Firestore e formatar para o calendário
         async function buscarPlantoes() {
-            const snapshot = await db.collection("plantoes").get();
+            const user = firebase.auth().currentUser;
+            if (!user) return [];
+            const snapshot = await db.collection("plantoes").where("userId", "==", user.uid).get();
             const eventos = [];
             snapshot.forEach(doc => {
                 const p = doc.data();
@@ -430,14 +432,18 @@
             const mes = document.getElementById('mesResumo').value.padStart(2, '0');
             const ano = document.getElementById('anoResumo').value;
             const resumoContent = document.getElementById('resumoContent');
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                resumoContent.innerHTML = "<p>Usuário não autenticado.</p>";
+                return;
+            }
 
-            // Busca todos os plantões
-            const snapshot = await db.collection("plantoes").get();
+            // Busca apenas os plantões do usuário logado
+            const snapshot = await db.collection("plantoes").where("userId", "==", user.uid).get();
             const resumoPorLocal = {};
 
             snapshot.forEach(doc => {
                 const p = doc.data();
-                // Verifica se o plantão é do mês/ano selecionado
                 if (p.data && p.data.startsWith(`${ano}-${mes}`)) {
                     if (!resumoPorLocal[p.local]) {
                         resumoPorLocal[p.local] = { horas: 0, valor: 0 };
@@ -449,7 +455,6 @@
                 }
             });
 
-            // Monta o HTML do resumo
             let html = '';
             Object.keys(resumoPorLocal).forEach(local => {
                 html += `
@@ -479,13 +484,21 @@
             const valorHora = document.getElementById('valorHora').value;
             const observacoes = document.getElementById('observacoes').value;
 
+            // Adiciona o UID do usuário logado
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert("Usuário não autenticado!");
+                return;
+            }
+
             const plantao = {
                 data,
                 horaInicio,
                 tempoPlantao,
                 local,
                 valorHora,
-                observacoes
+                observacoes,
+                userId: user.uid // <-- Aqui!
             };
 
             try {
