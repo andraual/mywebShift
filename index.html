@@ -421,7 +421,7 @@
                 $('#calendar').fullCalendar('addEventSource', eventos);
             };
 
-            // Redimensiona o calendário ao carregar
+         // Redimensiona o calendário ao carregar
             $(window).on('resize', function() {
                 $('#calendar').fullCalendar('option', 'height', $(window).height() - 200);
             }).trigger('resize');
@@ -525,6 +525,35 @@
                 erroDiv.textContent = 'E-mail ou senha inválidos.';
             }
         });
+
+        // Função para definir o valor por hora automaticamente
+        function atualizarValorHora() {
+            const data = document.getElementById('data').value;
+            const local = document.getElementById('local').value;
+            const valorHoraInput = document.getElementById('valorHora');
+
+            if (!data || !local) {
+                valorHoraInput.value = '';
+                return;
+            }
+
+            // Descobre o dia da semana (0=Domingo, 6=Sábado)
+            const partes = data.split('-');
+            const dataObj = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
+            const diaSemana = dataObj.getDay();
+
+            let valor = '';
+            if (local === 'Notredame Intermédia Diadema') {
+                valor = (diaSemana === 0 || diaSemana === 6) ? 125 : 114;
+            } else if (local === 'Beneficiencia Portuguesa de SCS') {
+                valor = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
+            }
+            valorHoraInput.value = valor;
+        }
+
+        // Adiciona listeners para atualizar o valor ao mudar data ou local
+        document.getElementById('data').addEventListener('change', atualizarValorHora);
+        document.getElementById('local').addEventListener('change', atualizarValorHora);
     </script>
 </body>
 </html>
