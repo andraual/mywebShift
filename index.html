@@ -60,6 +60,7 @@
             height: auto; /* Ajusta a altura dinamicamente asdasdasd*/
             min-height: 400px; /* Define uma altura mínima */
             overflow: hidden; /* Evita que o conteúdo ultrapasse os limites */
+            z-index: 1; /* Define um z-index menor para o calendário */
         }
         .tab-content {
             overflow: auto;
@@ -249,13 +250,21 @@
                 <div class="form-group">
                     <label for="local">Local:</label>
                     <select id="local" required>
-                        <option value="Notredame Intermédia Diadema">Notredame Intermédia Diadema</option>
-                        <option value="Beneficiencia Portuguesa de SCS">Beneficência Portuguesa de SCS</option>
+                        <option value="Intermedica Diadema">Intermedica Diadema</option>
+                        <option value="Beneficência Portuguesa SC">Beneficência Portuguesa SC</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="valorHora">Valor por Hora (R$):</label>
                     <input type="number" id="valorHora" step="0.01" required>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="valorCheioCheck" style="width:auto;">
+                    <label for="valorCheioCheck" style="margin:0;">Informar valor cheio do plantão</label>
+                </div>
+                <div class="form-group" id="valorCheioGroup" style="display:none;">
+                    <label for="valorCheio">Valor Cheio do Plantão (R$):</label>
+                    <input type="number" id="valorCheio" step="0.01">
                 </div>
                 <div class="form-group full-width">
                     <label for="observacoes">Observações:</label>
@@ -335,6 +344,9 @@
             if (secao === 'resumo') {
                 filtrarResumo();
             }
+            if (secao === 'inicio') {
+        plantaoEditandoId = null;
+    }
         }
 
         // Inicialização do Firebase usando a API compatível
@@ -376,6 +388,7 @@
             snapshot.forEach(doc => {
                 const p = doc.data();
                 eventos.push({
+                    id: doc.id, // Inclui o ID do documento
                     title: `Plantão - ${p.local}`,
                     start: `${p.data}T${p.horaInicio}`,
                     end: moment(`${p.data}T${p.horaInicio}`).add(Number(p.tempoPlantao), 'hours').format('YYYY-MM-DDTHH:mm'),
@@ -404,13 +417,32 @@
                 eventLimit: true,
                 events: [],
                 eventClick: function(calEvent, jsEvent, view) {
-                    alert(
-                        'Plantão: ' + calEvent.title +
-                        '\nLocal: ' + calEvent.local +
-                        '\nValor por hora: R$ ' + calEvent.valorHora +
-                        '\nTotal: R$ ' + calEvent.total +
-                        (calEvent.observacoes ? '\nObservações: ' + calEvent.observacoes : '')
-                    );
+                    const confirmacao = `
+                        <div style="text-align: center;">
+                            <p>Plantão: ${calEvent.title}</p>
+                            <p>Local: ${calEvent.local}</p>
+                            <p>Valor por hora: R$ ${calEvent.valorHora}</p>
+                            <p>Total: R$ ${calEvent.total}</p>
+                            ${calEvent.observacoes ? `<p>Observações: ${calEvent.observacoes}</p>` : ''}
+                            <button onclick="editarPlantao('${calEvent.id}')">✏️ Editar</button>
+                            <button onclick="excluirPlantao('${calEvent.id}')">🗑️ Excluir</button>
+                            <button onclick="fecharPopup()">Cancelar</button>
+                        </div>
+                    `;
+                    const modal = document.createElement('div');
+                    modal.style.position = 'fixed';
+                    modal.style.top = '50%';
+                    modal.style.left = '50%';
+                    modal.style.transform = 'translate(-50%, -50%)';
+                    modal.style.background = 'white';
+                    modal.style.padding = '20px';
+                    modal.style.borderRadius = '8px';
+                    modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+                    modal.style.zIndex = '9999'; // Garante que o modal fique acima de outros elementos
+                    modal.innerHTML = confirmacao;
+
+                    modal.id = 'popupModal'; // Adiciona um ID ao modal para facilitar a manipulação
+                    document.body.appendChild(modal);
                 }
             });
 
@@ -446,12 +478,20 @@
                 const p = doc.data();
                 if (p.data && p.data.startsWith(`${ano}-${mes}`)) {
                     if (!resumoPorLocal[p.local]) {
-                        resumoPorLocal[p.local] = { horas: 0, valor: 0 };
+                        resumoPorLocal[p.local] = { horas: 0, valor: 0, plantoes: [] };
                     }
                     const horas = Number(p.tempoPlantao) || 0;
                     const valorHora = Number(p.valorHora) || 0;
+                    const valorTotal = p.valorTotal !== undefined ? Number(p.valorTotal) : (horas * valorHora);
                     resumoPorLocal[p.local].horas += horas;
-                    resumoPorLocal[p.local].valor += horas * valorHora;
+                    resumoPorLocal[p.local].valor += valorTotal;
+                    resumoPorLocal[p.local].plantoes.push({
+                        data: p.data,
+                        horaInicio: p.horaInicio,
+                        tempoPlantao: horas,
+                        valorHora: valorHora,
+                        valorTotal: valorTotal
+                    });
                 }
             });
 
@@ -460,8 +500,30 @@
                 html += `
                     <div class="summary-item">
                         <h3>${local}</h3>
-                        <p>Total de horas: ${resumoPorLocal[local].horas}</p>
-                        <p>Valor total: R$ ${resumoPorLocal[local].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                        <table style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+                            <thead>
+                                <tr>
+                                    <th style="border-bottom:1px solid #ccc; text-align:left; padding:4px;">Dia</th>
+                                    <th style="border-bottom:1px solid #ccc; text-align:left; padding:4px;">Hora de Entrada</th>
+                                    <th style="border-bottom:1px solid #ccc; text-align:left; padding:4px;">Horas</th>
+                                    <th style="border-bottom:1px solid #ccc; text-align:left; padding:4px;">Valor/Hora</th>
+                                    <th style="border-bottom:1px solid #ccc; text-align:left; padding:4px;">Valor Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${resumoPorLocal[local].plantoes.map(p => `
+                                    <tr>
+                                        <td style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
+                                        <td style="padding:4px;">${p.horaInicio}</td>
+                                        <td style="padding:4px;">${p.tempoPlantao}</td>
+                                        <td style="padding:4px;">${p.valorHora ? 'R$ ' + Number(p.valorHora).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                        <td style="padding:4px;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <p><strong>Total de horas:</strong> ${resumoPorLocal[local].horas}</p>
+                        <p><strong>Valor total:</strong> R$ ${resumoPorLocal[local].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
                     </div>
                 `;
             });
@@ -482,13 +544,25 @@
             const tempoPlantao = document.getElementById('tempoPlantao').value;
             const local = document.getElementById('local').value;
             const valorHora = document.getElementById('valorHora').value;
+            const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
+            const valorCheio = document.getElementById('valorCheio').value;
             const observacoes = document.getElementById('observacoes').value;
 
-            // Adiciona o UID do usuário logado
             const user = firebase.auth().currentUser;
             if (!user) {
                 alert("Usuário não autenticado!");
                 return;
+            }
+
+            let valorTotal;
+            let valorHoraFinal = valorHora;
+
+            if (valorCheioCheck && valorCheio) {
+                valorTotal = Number(valorCheio);
+                // Garante que valorHora seja recalculado corretamente
+                valorHoraFinal = (Number(valorCheio) / Number(tempoPlantao)).toFixed(2);
+            } else {
+                valorTotal = Number(valorHora) * Number(tempoPlantao);
             }
 
             const plantao = {
@@ -496,15 +570,29 @@
                 horaInicio,
                 tempoPlantao,
                 local,
-                valorHora,
+                valorHora: valorHoraFinal,
+                valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                valorTotal,
                 observacoes,
-                userId: user.uid // <-- Aqui!
+                userId: user.uid
             };
 
             try {
-                const docRef = await db.collection("plantoes").add(plantao);
-                alert(`Plantão cadastrado com sucesso! ID: ${docRef.id}`);
+                if (plantaoEditandoId) {
+                    // Atualiza o plantão existente
+                    await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
+                    alert("Plantão atualizado com sucesso!");
+                    plantaoEditandoId = null; // Limpa o modo edição
+                } else {
+                    // Cria um novo plantão
+                    await db.collection("plantoes").add(plantao);
+                    alert("Plantão cadastrado com sucesso!");
+                }
                 this.reset();
+                document.getElementById('valorCheioGroup').style.display = 'none';
+                document.getElementById('valorHora').disabled = false;
+                mostrarSecao('calendario');
+                window.atualizarCalendario();
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
                 alert("Erro ao salvar plantão.");
@@ -543,9 +631,9 @@
             const diaSemana = dataObj.getDay();
 
             let valor = '';
-            if (local === 'Notredame Intermédia Diadema') {
+            if (local === 'Intermedica Diadema') {
                 valor = (diaSemana === 0 || diaSemana === 6) ? 125 : 114;
-            } else if (local === 'Beneficiencia Portuguesa de SCS') {
+            } else if (local === 'Beneficência Portuguesa SC') {
                 valor = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
             }
             valorHoraInput.value = valor;
@@ -554,6 +642,87 @@
         // Adiciona listeners para atualizar o valor ao mudar data ou local
         document.getElementById('data').addEventListener('change', atualizarValorHora);
         document.getElementById('local').addEventListener('change', atualizarValorHora);
+
+        let plantaoEditandoId = null;
+
+        async function editarPlantao(id) {
+            fecharPopup();
+            plantaoEditandoId = id; // <-- Aqui
+
+            const doc = await db.collection("plantoes").doc(id).get();
+            const plantao = doc.data();
+
+            if (!plantao) {
+                alert("Plantão não encontrado!");
+                return;
+            }
+
+            document.getElementById('data').value = plantao.data;
+            document.getElementById('horaInicio').value = plantao.horaInicio;
+            document.getElementById('tempoPlantao').value = plantao.tempoPlantao;
+            document.getElementById('local').value = plantao.local;
+            document.getElementById('valorHora').value = plantao.valorHora;
+            document.getElementById('observacoes').value = plantao.observacoes;
+
+            mostrarSecao('cadastro');
+        }
+
+        async function excluirPlantao(id) {
+            if (confirm("Tem certeza que deseja excluir este plantão?")) {
+                try {
+                    await db.collection("plantoes").doc(id).delete();
+                    alert("Plantão excluído com sucesso!");
+                    fecharPopup(); // Fecha o popup após excluir
+                    window.atualizarCalendario(); // Atualiza o calendário
+                } catch (error) {
+                    console.error("Erro ao excluir plantão: ", error);
+                    alert("Erro ao excluir plantão.");
+                }
+            }
+        }
+
+        function fecharPopup() {
+            const modal = document.getElementById('popupModal');
+            if (modal) {
+                document.body.removeChild(modal);
+            }
+        }
+
+        // Mostrar/ocultar campo de valor cheio e calcular valorHora automaticamente
+document.getElementById('valorCheioCheck').addEventListener('change', function() {
+    const valorCheioGroup = document.getElementById('valorCheioGroup');
+    const valorCheioInput = document.getElementById('valorCheio');
+    const valorHoraInput = document.getElementById('valorHora');
+    valorCheioGroup.style.display = this.checked ? 'block' : 'none';
+    valorCheioInput.required = this.checked;
+    valorHoraInput.disabled = this.checked;
+
+    if (this.checked) {
+        // Se marcar, limpa o valorHora e espera o usuário preencher o valor cheio
+        valorHoraInput.value = '';
+    } else {
+        valorCheioInput.value = '';
+        valorHoraInput.disabled = false;
+    }
+});
+
+// Sempre que o valor cheio ou tempo mudar, calcula o valorHora automaticamente se o checkbox estiver marcado
+document.getElementById('valorCheio').addEventListener('input', function() {
+    const tempo = parseFloat(document.getElementById('tempoPlantao').value);
+    const valorCheio = parseFloat(this.value);
+    const valorHoraInput = document.getElementById('valorHora');
+    if (!isNaN(tempo) && tempo > 0 && !isNaN(valorCheio)) {
+        valorHoraInput.value = (valorCheio / tempo).toFixed(2);
+    }
+});
+document.getElementById('tempoPlantao').addEventListener('input', function() {
+    const tempo = parseFloat(this.value);
+    const valorCheio = parseFloat(document.getElementById('valorCheio').value);
+    const valorHoraInput = document.getElementById('valorHora');
+    if (document.getElementById('valorCheioCheck').checked && !isNaN(tempo) && tempo > 0 && !isNaN(valorCheio)) {
+        valorHoraInput.value = (valorCheio / tempo).toFixed(2);
+    }
+});
     </script>
 </body>
 </html>
