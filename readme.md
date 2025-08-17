@@ -1,3 +1,3 @@
 # TODOS
--subir histórico
--arrumar letras no resumo financeiro
+-subir histórico <br>
+-arrumar letras no resumo financeiro <br>

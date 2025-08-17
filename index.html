@@ -4,22 +4,35 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Plantões Médicos</title>
+    <!-- load Inter from Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         /* Estilos gerais */
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            color: #222;
+            background: linear-gradient(180deg, #fff5f9 0%, #fff 60%);
             margin: 0;
             padding: 20px;
-            background-color: #f5f5f5;
+            font-size: 15px;
+            line-height: 1.45;
         }
+        h1, h2, h3 { font-weight: 700; margin: 0 0 12px 0; }
+        .main-btn span { font-weight: 600; }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 24px;
+            border-radius: 14px;
+            box-shadow: 0 8px 30px rgba(255, 102, 170, 0.08);
+            transition: transform .18s ease, box-shadow .18s ease;
         }
+        .container:hover { transform: translateY(-4px); box-shadow: 0 18px 40px rgba(255,102,170,0.08); }
+
         form {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -41,16 +54,16 @@
             box-sizing: border-box;
         }
         button {
-            background-color: #4CAF50;
+            background: linear-gradient(90deg,#ff7bb3 0%, #ff4d94 100%);
             color: white;
             padding: 10px 15px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 15px;
         }
         button:hover {
-            background-color: #45a049;
+            opacity: 0.95;
         }
         .full-width {
             grid-column: 1 / -1;
@@ -79,6 +92,10 @@
         }
         .summary-item {
             margin-bottom: 20px;
+            background: linear-gradient(180deg,#fff,#fffaf6);
+            padding:14px;
+            border-radius:10px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.04);
         }
 
         /* Página inicial */
@@ -93,14 +110,41 @@
             margin-bottom: 20px;
         }
         .main-btns {
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
+            display:flex;
+            gap:18px;
+            flex-wrap:wrap;
         }
-        .main-btns button {
+        .main-btn {
+            background: linear-gradient(90deg,#ff7bb3 0%, #ff4d94 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 20px;
             min-width: 180px;
-            font-size: 18px;
-            padding: 18px 24px;
+            min-height: 100px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+            box-shadow: 0 8px 20px rgba(255,77,148,0.12);
+            cursor:pointer;
+            transition: transform .14s ease, box-shadow .14s ease, opacity .14s;
+            text-decoration: none;
+        }
+        .main-btn svg { filter: drop-shadow(0 6px 18px rgba(255,77,148,0.12)); }
+        .main-btn span { margin-top:10px; font-weight:600; font-size:15px; }
+
+        /* hover / active */
+        .main-btn:hover { transform: translateY(-4px); box-shadow: 0 22px 40px rgba(255,77,148,0.14); }
+        .main-btn:active { transform: translateY(-1px); }
+
+        /* secondary logout button */
+        button.logout-btn {
+            background: transparent;
+            border: 1px solid rgba(0,0,0,0.08);
+            color: #333;
+            padding:8px 12px;
+            border-radius:10px;
         }
 
         /* Responsividade para telas menores */
@@ -214,44 +258,44 @@
 
     <!-- App principal -->
     <div class="container" style="display:none;">
-        <h1>Controle de Plantões Médicos</h1>
         
         <!-- Página Inicial -->
         <div id="inicio" style="display:none;">
             <h2>Bem-vindo! O que deseja fazer?</h2>
             <div class="main-btns">
-                <button onclick="mostrarSecao('cadastro')" title="Cadastrar Novo Plantão" style="display: flex; flex-direction: column; align-items: center;">
-                    <!-- Ícone de mais (+) -->
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                        <circle cx="24" cy="24" r="22" stroke="#4CAF50" stroke-width="4" fill="#E8F5E9"/>
-                        <rect x="22" y="12" width="4" height="24" rx="2" fill="#4CAF50"/>
-                        <rect x="12" y="22" width="24" height="4" rx="2" fill="#4CAF50"/>
+                <button class="main-btn" onclick="mostrarSecao('cadastro')" title="Cadastrar Novo Plantão">
+                    <!-- ícone plus moderno -->
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="11" y="4" width="2" height="16" rx="1" fill="#fff"/>
+                        <rect x="4" y="11" width="16" height="2" rx="1" fill="#fff"/>
                     </svg>
-                    <span style="margin-top:8px;">Cadastrar</span>
+                    <span>Cadastrar</span>
                 </button>
-                <button onclick="mostrarSecao('calendario')" title="Ver Calendário" style="display: flex; flex-direction: column; align-items: center;">
-                    <!-- Ícone de calendário -->
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                        <rect x="6" y="10" width="36" height="32" rx="4" fill="#E3F2FD" stroke="#1976D2" stroke-width="4"/>
-                        <rect x="14" y="20" width="8" height="8" rx="2" fill="#1976D2"/>
-                        <rect x="26" y="20" width="8" height="8" rx="2" fill="#1976D2"/>
-                        <rect x="14" y="32" width="8" height="8" rx="2" fill="#1976D2"/>
-                        <rect x="26" y="32" width="8" height="8" rx="2" fill="#1976D2"/>
-                        <rect x="12" y="6" width="4" height="8" rx="2" fill="#1976D2"/>
-                        <rect x="32" y="6" width="4" height="8" rx="2" fill="#1976D2"/>
+
+                <button class="main-btn" onclick="mostrarSecao('calendario')" title="Ver Calendário">
+                    <!-- novo ícone calendário (outline mais moderno) -->
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 2v2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M17 2v2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <rect x="3" y="6" width="18" height="15" rx="2" stroke="rgba(255,255,255,0.14)" fill="rgba(255,255,255,0.06)"/>
+                        <path d="M8 11h2M8 15h2M12 11h4M12 15h4" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span style="margin-top:8px;">Calendário</span>
+                    <span>Calendário</span>
                 </button>
-                <button onclick="mostrarSecao('resumo')" title="Resumo Financeiro" style="display: flex; flex-direction: column; align-items: center;">
-                    <!-- Ícone de cifrão ($) -->
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                        <circle cx="24" cy="24" r="22" stroke="#FFD600" stroke-width="4" fill="#FFFDE7"/>
-                        <text x="24" y="32" text-anchor="middle" font-size="28" font-family="Arial" fill="#FFD600" font-weight="bold">$</text>
+
+                <button class="main-btn" onclick="mostrarSecao('resumo')" title="Financeiro">
+                    <!-- ícone cifrão moderno (substituído) -->
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="9" fill="rgba(255,255,255,0.08)"/>
+                        <path d="M12 7v2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15v2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M15 8.5c-1-.8-2.5-1-3.5-1-1 0-2.3.3-3.3 1" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M9 15.5c1 .8 2.5 1 3.5 1 1 0 2.3-.3 3.3-1" stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span style="margin-top:8px;">Resumo</span>
+                    <span>Financeiro</span>
                 </button>
             </div>
-            <button onclick="firebase.auth().signOut()" style="float:right; margin-top:-10px;">Sair</button>
+            <button onclick="firebase.auth().signOut()" class="logout-btn" style="float:right; margin-top:-10px;">Sair</button>
         </div>
         
         <!-- Seção de Cadastro -->
@@ -366,11 +410,12 @@
             }
             // Atualiza o resumo ao entrar na tela
             if (secao === 'resumo') {
+                setResumoDefaults(); // <-- define mês/ano atual antes de filtrar
                 filtrarResumo();
             }
             if (secao === 'inicio') {
-        plantaoEditandoId = null;
-    }
+                plantaoEditandoId = null;
+            }
         }
 
         // Inicialização do Firebase usando a API compatível
@@ -529,7 +574,7 @@
                                 <thead>
                                     <tr>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Dia</th>
-                                        <th style="border-bottom:1px solid #ccc; padding:4px;">Hora de Entrada</th>
+                                        <th style="border-bottom:1px solid #ccc; padding:4px;">Entrada</th> <!-- alterado -->
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Horas</th>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Valor/Hora</th>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Valor Total</th>
@@ -749,6 +794,31 @@ document.getElementById('tempoPlantao').addEventListener('input', function() {
         valorHoraInput.value = (valorCheio / tempo).toFixed(2);
     }
 });
+
+// adiciona esta função no mesmo <script> (logo após mostrarSecao ou onde ficar melhor)
+function setResumoDefaults() {
+    const now = new Date();
+    const mes = String(now.getMonth() + 1); // valores das options: "1".."12"
+    const ano = String(now.getFullYear());
+
+    const mesSelect = document.getElementById('mesResumo');
+    const anoSelect = document.getElementById('anoResumo');
+
+    if (mesSelect) {
+        mesSelect.value = mes;
+    }
+    if (anoSelect) {
+        // adiciona o ano nas options caso não exista (ex.: ano futuro)
+        const exists = Array.from(anoSelect.options).some(opt => opt.value === ano);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = ano;
+            opt.text = ano;
+            anoSelect.appendChild(opt);
+        }
+        anoSelect.value = ano;
+    }
+}
     </script>
 </body>
 </html>
