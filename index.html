@@ -228,66 +228,61 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/locale/pt-br.js"></script>
     
+    <!-- Adicione antes do seu script -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
     <script>
-        // Import the functions you need from the SDKs you need
-        import { initializeApp } from "firebase/app";
-        import { getAnalytics } from "firebase/analytics";
-        import { getFirestore, collection, addDoc } from "firebase/firestore";
-
-        // TODO: Add SDKs for Firebase products that you want to use
-        // https://firebase.google.com/docs/web/setup#available-libraries
-
-        // Your web app's Firebase configuration
-        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        // Inicialização do Firebase usando a API compatível
         const firebaseConfig = {
-        apiKey: "AIzaSyCPCsCD_UwBk_c4weCgTi8r0JyhdQThrZQ",
-        authDomain: "mywebshift.firebaseapp.com",
-        projectId: "mywebshift",
-        storageBucket: "mywebshift.firebasestorage.app",
-        messagingSenderId: "994220258656",
-        appId: "1:994220258656:web:4686ab749f948e3ae19a05",
-        measurementId: "G-LF8XYGQ7M2"
+            apiKey: "AIzaSyCPCsCD_UwBk_c4weCgTi8r0JyhdQThrZQ",
+            authDomain: "mywebshift.firebaseapp.com",
+            projectId: "mywebshift",
+            storageBucket: "mywebshift.appspot.com", // Corrigido aqui
+            messagingSenderId: "994220258656",
+            appId: "1:994220258656:web:4686ab749f948e3ae19a05",
+            measurementId: "G-LF8XYGQ7M2"
         };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
-        const db = getFirestore(app);
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+        const db = firebase.firestore();
 
         // Função para salvar dados no Firestore
         async function salvarPlantao(data) {
             try {
-                const docRef = await addDoc(collection(db, "plantoes"), data);
+                const docRef = await db.collection("plantoes").add(data);
                 console.log("Plantão salvo com ID: ", docRef.id);
             } catch (e) {
                 console.error("Erro ao salvar plantão: ", e);
             }
         }
 
-        // Função para alternar entre abas
-        function openTab(tabName) {
-            const tabs = document.getElementsByClassName('tab');
-            const tabContents = document.getElementsByClassName('tab-content');
-            
-            for (let i = 0; i < tabs.length; i++) {
-                tabs[i].classList.remove('active');
-                tabContents[i].classList.remove('active');
-            }
-            
-            document.getElementById(tabName).classList.add('active');
-            event.currentTarget.classList.add('active');
-            
-            // Se for a aba do calendário, redimensiona
-            if (tabName === 'calendario') {
-                setTimeout(() => {
-                    $('#calendar').fullCalendar('render');
-                    $('#calendar').fullCalendar('option', 'height', 600); // Define altura fixa
-                }, 100);
-            }
-        }
-        
         // Inicializa o calendário
         $(document).ready(function() {
+            // Função para buscar plantões do Firestore e formatar para o calendário
+            async function buscarPlantoes() {
+                const snapshot = await db.collection("plantoes").get();
+                const eventos = [];
+                snapshot.forEach(doc => {
+                    const p = doc.data();
+                    // Monta o evento no formato do FullCalendar
+                    eventos.push({
+                        title: `Plantão - ${p.local}`,
+                        start: `${p.data}T${p.horaInicio}`,
+                        end: moment(`${p.data}T${p.horaInicio}`).add(Number(p.tempoPlantao), 'hours').format('YYYY-MM-DDTHH:mm'),
+                        local: p.local,
+                        valorHora: p.valorHora,
+                        horas: p.tempoPlantao,
+                        total: (Number(p.valorHora) * Number(p.tempoPlantao)).toFixed(2),
+                        observacoes: p.observacoes
+                    });
+                });
+                return eventos;
+            }
+
+            // Inicializa o calendário com eventos do Firestore
             $('#calendar').fullCalendar({
                 locale: 'pt-br',
                 header: {
@@ -296,67 +291,75 @@
                     right: 'month,agendaWeek,agendaDay'
                 },
                 defaultView: 'month',
-                editable: true,
+                editable: false,
                 eventLimit: true,
-                events: [
-                    {
-                        title: 'Plantão - Hospital Central',
-                        start: '2024-03-15T08:00:00',
-                        end: '2024-03-15T18:00:00',
-                        local: 'Hospital Central',
-                        valorHora: 100,
-                        horas: 10,
-                        total: 1000
-                    },
-                    {
-                        title: 'Plantão - Clínica Saúde',
-                        start: '2024-03-20T18:00:00',
-                        end: '2024-03-21T06:00:00',
-                        local: 'Clínica Saúde',
-                        valorHora: 120,
-                        horas: 12,
-                        total: 1440
-                    }
-                ],
+                events: function(start, end, timezone, callback) {
+                    buscarPlantoes().then(callback);
+                },
                 eventClick: function(calEvent, jsEvent, view) {
-                    alert('Plantão: ' + calEvent.title + '\nLocal: ' + calEvent.local + 
-                          '\nValor por hora: R$ ' + calEvent.valorHora + 
-                          '\nTotal: R$ ' + calEvent.total);
+                    alert(
+                        'Plantão: ' + calEvent.title +
+                        '\nLocal: ' + calEvent.local +
+                        '\nValor por hora: R$ ' + calEvent.valorHora +
+                        '\nTotal: R$ ' + calEvent.total +
+                        (calEvent.observacoes ? '\nObservações: ' + calEvent.observacoes : '')
+                    );
                 }
             });
 
             // Redimensiona o calendário ao carregar
             $(window).on('resize', function() {
-                $('#calendar').fullCalendar('option', 'height', $(window).height() - 200); // Ajusta a altura dinamicamente
+                $('#calendar').fullCalendar('option', 'height', $(window).height() - 200);
             }).trigger('resize');
         });
-        
+
         // Função para filtrar o resumo financeiro
-        function filtrarResumo() {
-            const mes = document.getElementById('mesResumo').value;
+        async function filtrarResumo() {
+            const mes = document.getElementById('mesResumo').value.padStart(2, '0');
             const ano = document.getElementById('anoResumo').value;
-            
-            // Aqui você faria uma requisição para buscar os dados do mês/ano selecionado
-            // Estou simulando com dados estáticos
             const resumoContent = document.getElementById('resumoContent');
-            resumoContent.innerHTML = `
-                <div class="summary-item">
-                    <h3>Notredame Intermédia Diadema</h3>
-                    <p>Total de horas: ${Math.floor(Math.random() * 40) + 10}</p>
-                    <p>Valor total: R$ ${(Math.random() * 5000 + 1000).toFixed(2)}</p>
-                </div>
-                <div class="summary-item">
-                    <h3>Beneficência Portuguesa de SCS</h3>
-                    <p>Total de horas: ${Math.floor(Math.random() * 30) + 5}</p>
-                    <p>Valor total: R$ ${(Math.random() * 4000 + 800).toFixed(2)}</p>
-                </div>
-            `;
+
+            // Busca todos os plantões
+            const snapshot = await db.collection("plantoes").get();
+            const resumoPorLocal = {};
+
+            snapshot.forEach(doc => {
+                const p = doc.data();
+                // Verifica se o plantão é do mês/ano selecionado
+                if (p.data && p.data.startsWith(`${ano}-${mes}`)) {
+                    if (!resumoPorLocal[p.local]) {
+                        resumoPorLocal[p.local] = { horas: 0, valor: 0 };
+                    }
+                    const horas = Number(p.tempoPlantao) || 0;
+                    const valorHora = Number(p.valorHora) || 0;
+                    resumoPorLocal[p.local].horas += horas;
+                    resumoPorLocal[p.local].valor += horas * valorHora;
+                }
+            });
+
+            // Monta o HTML do resumo
+            let html = '';
+            Object.keys(resumoPorLocal).forEach(local => {
+                html += `
+                    <div class="summary-item">
+                        <h3>${local}</h3>
+                        <p>Total de horas: ${resumoPorLocal[local].horas}</p>
+                        <p>Valor total: R$ ${resumoPorLocal[local].valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+                    </div>
+                `;
+            });
+
+            if (!html) {
+                html = `<p>Nenhum plantão encontrado para o período selecionado.</p>`;
+            }
+
+            resumoContent.innerHTML = html;
         }
-        
+
         // Formulário de cadastro
         document.getElementById('plantaoForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             const data = document.getElementById('data').value;
             const horaInicio = document.getElementById('horaInicio').value;
             const tempoPlantao = document.getElementById('tempoPlantao').value;
@@ -374,7 +377,7 @@
             };
 
             try {
-                const docRef = await addDoc(collection(db, "plantoes"), plantao);
+                const docRef = await db.collection("plantoes").add(plantao);
                 alert(`Plantão cadastrado com sucesso! ID: ${docRef.id}`);
                 this.reset();
             } catch (error) {
