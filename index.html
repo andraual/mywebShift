@@ -225,13 +225,57 @@
     vertical-align: middle;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;   /* evita texto "estourar" e sobrepor */
+    text-overflow: ellipsis;
 }
+
+/* torno a coluna "Entrada" e "Horas" menores */
+.summary-item th:nth-child(2),
+.summary-item td:nth-child(2) {
+    width: 90px;       /* largura fixa para a coluna Entrada */
+    max-width: 90px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.summary-item th:nth-child(3),
+.summary-item td:nth-child(3) {
+    width: 70px;        /* largura fixa para a coluna Horas */
+    max-width: 70px;
+    text-align: center; /* centraliza o número de horas */
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+/* responsivo: reduz ainda mais em telas pequenas */
 @media (max-width: 768px) {
     .summary-item table { font-size: 12px; min-width: 520px; }
+    .summary-item th:nth-child(2),
+    .summary-item td:nth-child(2) {
+        width: 64px;
+        max-width: 64px;
+        font-size: 12px;
+    }
+    .summary-item th:nth-child(3),
+    .summary-item td:nth-child(3) {
+        width: 56px;
+        max-width: 56px;
+        font-size: 12px;
+    }
 }
 @media (max-width: 480px) {
     .summary-item table { font-size: 11px; min-width: 420px; }
+    .summary-item th:nth-child(2),
+    .summary-item td:nth-child(2) {
+        width: 56px;
+        max-width: 56px;
+        font-size: 11px;
+    }
+    .summary-item th:nth-child(3),
+    .summary-item td:nth-child(3) {
+        width: 48px;
+        max-width: 48px;
+        font-size: 11px;
+    }
 }
 /* --- fim --- */
     </style>
@@ -567,9 +611,8 @@
                     resumoPorLocal[p.local].valor += valorTotal;
                     resumoPorLocal[p.local].plantoes.push({
                         data: p.data,
-                        horaInicio: p.horaInicio,
+                        horaInicio: p.horaInicio || '',
                         tempoPlantao: horas,
-                        valorHora: valorHora,
                         valorTotal: valorTotal
                     });
                 }
@@ -577,6 +620,12 @@
 
             let html = '';
             Object.keys(resumoPorLocal).forEach(local => {
+                // ordenar plantoes por data asc e entrada asc
+                resumoPorLocal[local].plantoes.sort((a, b) => {
+                    if (a.data !== b.data) return a.data.localeCompare(b.data);
+                    return (a.horaInicio || '').localeCompare(b.horaInicio || '');
+                });
+
                 html += `
                     <div class="summary-item">
                         <h3>${local}</h3>
@@ -585,20 +634,18 @@
                                 <thead>
                                     <tr>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Dia</th>
-                                        <th style="border-bottom:1px solid #ccc; padding:4px;">Entrada</th> <!-- alterado -->
+                                        <th style="border-bottom:1px solid #ccc; padding:4px;">Entrada</th>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Horas</th>
-                                        <th style="border-bottom:1px solid #ccc; padding:4px;">Valor/Hora</th>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Valor Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     ${resumoPorLocal[local].plantoes.map(p => `
                                         <tr>
-                                            <td>${p.data.split('-').reverse().join('/')}</td>
-                                            <td>${p.horaInicio}</td>
-                                            <td>${p.tempoPlantao}</td>
-                                            <td>${p.valorHora ? 'R$ ' + Number(p.valorHora).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
-                                            <td>${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                            <td style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
+                                            <td style="padding:4px;">${p.horaInicio || '-'}</td>
+                                            <td style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
+                                            <td style="padding:4px;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
