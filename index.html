@@ -70,10 +70,11 @@
         }
         #calendar {
             width: 100%;
-            height: auto; /* Ajusta a altura dinamicamente asdasdasd*/
-            min-height: 400px; /* Define uma altura mínima */
-            overflow: hidden; /* Evita que o conteúdo ultrapasse os limites */
-            z-index: 1; /* Define um z-index menor para o calendário */
+            /* altura mínima maior para evitar corte das linhas do mês */
+            min-height: 520px;
+            /* permite rolagem se necessário e evita que elementos sejam escondidos */
+            overflow: auto;
+            z-index: 1;
         }
         .tab-content {
             overflow: auto;
@@ -473,7 +474,10 @@
 
         // Inicializa o calendário
         $(document).ready(function() {
-            // Inicializa o calendário vazio
+            // calcula altura inicial (garante um mínimo)
+            const initialCalendarHeight = Math.max(520, $(window).height() - 220);
+
+            // Inicializa o calendário vazio com height fixo calculado
             $('#calendar').fullCalendar({
                 locale: 'pt-br',
                 header: {
@@ -485,6 +489,7 @@
                 editable: false,
                 eventLimit: true,
                 events: [],
+                height: initialCalendarHeight,
                 eventClick: function(calEvent, jsEvent, view) {
                     const confirmacao = `
                         <div style="text-align: center;">
@@ -522,9 +527,15 @@
                 $('#calendar').fullCalendar('addEventSource', eventos);
             };
 
-         // Redimensiona o calendário ao carregar
+            // Ajusta altura do calendário ao redimensionar a janela (mantém mínimo)
             $(window).on('resize', function() {
-                $('#calendar').fullCalendar('option', 'height', $(window).height() - 200);
+                const h = Math.max(520, $(window).height() - 220);
+                try {
+                    $('#calendar').fullCalendar('option', 'height', h);
+                    $('#calendar').fullCalendar('render');
+                } catch (e) {
+                    console.warn('Erro ao ajustar altura do FullCalendar:', e);
+                }
             }).trigger('resize');
         });
 
@@ -652,12 +663,12 @@
                 if (plantaoEditandoId) {
                     // Atualiza o plantão existente
                     await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
-                    alert("Plantão atualizado com sucesso!");
+                    console.log("Plantão atualizado com sucesso!");
                     plantaoEditandoId = null; // Limpa o modo edição
                 } else {
                     // Cria um novo plantão
                     await db.collection("plantoes").add(plantao);
-                    alert("Plantão cadastrado com sucesso!");
+                    console.log("Plantão cadastrado com sucesso!");
                 }
                 this.reset();
                 document.getElementById('valorCheioGroup').style.display = 'none';
@@ -666,7 +677,6 @@
                 window.atualizarCalendario();
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
-                alert("Erro ao salvar plantão.");
             }
         });
 
@@ -742,7 +752,7 @@
             if (confirm("Tem certeza que deseja excluir este plantão?")) {
                 try {
                     await db.collection("plantoes").doc(id).delete();
-                    alert("Plantão excluído com sucesso!");
+                    // alert("Plantão excluído com sucesso!");
                     fecharPopup(); // Fecha o popup após excluir
                     window.atualizarCalendario(); // Atualiza o calendário
                 } catch (error) {
