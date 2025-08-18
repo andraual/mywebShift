@@ -212,72 +212,105 @@
         }
 
         /* --- adicione ao final do <style> existente --- */
-.resumo-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.summary-item table {
-    font-size: 13px;            /* reduz um pouco a fonte */
-    table-layout: fixed;        /* ajuda a manter colunas estáveis */
-    min-width: 640px;          /* força scroll horizontal em telas pequenas */
-    width: 100%;
-}
-.summary-item th, .summary-item td {
-    padding: 6px;
-    text-align: left;
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+    /* Responsividade para as tabelas do resumo: voltar ao comportamento de tabela
+       e apenas redimensionar / permitir scroll horizontal em telas pequenas. */
+    .resumo-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .summary-item table {
+        font-size: 13px;
+        table-layout: fixed;
+        min-width: 520px;      /* reduzido para permitir melhor redimensionamento */
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .summary-item th, .summary-item td {
+        padding: 6px 8px;
+        text-align: left;
+        vertical-align: middle;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #eee;
+    }
+    .summary-item thead th { background: rgba(255,77,148,0.04); font-weight:600; }
 
-/* torno a coluna "Entrada" e "Horas" menores */
-.summary-item th:nth-child(2),
-.summary-item td:nth-child(2) {
-    width: 90px;       /* largura fixa para a coluna Entrada */
-    max-width: 90px;
-    text-align: center;
-    font-size: 13px;
-}
-
-.summary-item th:nth-child(3),
-.summary-item td:nth-child(3) {
-    width: 70px;        /* largura fixa para a coluna Horas */
-    max-width: 70px;
-    text-align: center; /* centraliza o número de horas */
-    white-space: nowrap;
-    font-size: 13px;
-}
-
-/* responsivo: reduz ainda mais em telas pequenas */
-@media (max-width: 768px) {
-    .summary-item table { font-size: 12px; min-width: 520px; }
+    /* colunas pequenas (Entrada / Horas) */
     .summary-item th:nth-child(2),
-    .summary-item td:nth-child(2) {
-        width: 64px;
-        max-width: 64px;
-        font-size: 12px;
-    }
+    .summary-item td:nth-child(2) { width: 80px; max-width: 80px; text-align:center; }
     .summary-item th:nth-child(3),
-    .summary-item td:nth-child(3) {
-        width: 56px;
-        max-width: 56px;
-        font-size: 12px;
+    .summary-item td:nth-child(3) { width: 64px; max-width: 64px; text-align:center; }
+
+    /* Ajustes de fonte / largura em pontos de quebra (mantendo tabela) */
+    @media (max-width: 1024px) {
+        .summary-item table { font-size: 12px; min-width: 480px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 72px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 56px; }
     }
-}
-@media (max-width: 480px) {
-    .summary-item table { font-size: 11px; min-width: 420px; }
-    .summary-item th:nth-child(2),
-    .summary-item td:nth-child(2) {
-        width: 56px;
-        max-width: 56px;
-        font-size: 11px;
+    @media (max-width: 768px) {
+        .summary-item table { font-size: 11px; min-width: 420px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 64px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 48px; }
     }
-    .summary-item th:nth-child(3),
-    .summary-item td:nth-child(3) {
-        width: 48px;
-        max-width: 48px;
-        font-size: 11px;
+    @media (max-width: 480px) {
+        .summary-item table { font-size: 10px; min-width: 360px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 56px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 40px; }
     }
-}
-/* --- fim --- */
+
+    /* Ajustes específicos para iPhone / Safari mobile */
+    :root {
+        --safe-top: env(safe-area-inset-top);
+        --safe-bottom: env(safe-area-inset-bottom);
+    }
+    html, body {
+        height: 100%;
+        -webkit-text-size-adjust: 100%; /* impede zoom automático em iOS */
+        padding-top: calc(var(--safe-top));
+        padding-bottom: calc(var(--safe-bottom));
+    }
+
+    .container {
+        min-height: calc(100vh - 32px - var(--safe-top) - var(--safe-bottom));
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    /* touch targets maiores para iPhone */
+    button, .main-btn {
+        -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+        touch-action: manipulation;
+    }
+
+    /* inputs maiores no mobile */
+    @media (max-width: 480px) {
+        input, select, textarea, button {
+            font-size: 16px;
+        }
+        .main-btn {
+            min-height: 84px;
+            padding: 14px;
+            min-width: 140px;
+        }
+        #calendar {
+            min-height: 420px; /* um pouco menor para telas iPhone */
+        }
+        .summary-item table { min-width: 360px; font-size: 11px; }
+    }
+
+    /* suaviza scrolling horiz. no iOS */
+    .resumo-wrapper {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+    }
+
+    /* evita que o calendário fique "cortado" em iOS quando a URL bar some/aparece */
+    .fc-scroller { /* fullcalendar v3 uses internal scroller class on some views */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ...existing code... */
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
 </head>
@@ -642,10 +675,10 @@
                                 <tbody>
                                     ${resumoPorLocal[local].plantoes.map(p => `
                                         <tr>
-                                            <td style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
-                                            <td style="padding:4px;">${p.horaInicio || '-'}</td>
-                                            <td style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
-                                            <td style="padding:4px;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                            <td data-label="Dia" style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
+                                            <td data-label="Entrada" style="padding:4px;">${p.horaInicio || '-'}</td>
+                                            <td data-label="Horas" style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
+                                            <td data-label="Valor Total" style="padding:4px; text-align:right;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
@@ -876,6 +909,36 @@ function setResumoDefaults() {
         anoSelect.value = ano;
     }
 }
+
+    </script>
+    <!-- Ajustes runtime específicos para iPhone / iOS Safari -->
+    <script>
+    (function(){
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+
+        function ajustarAlturaCalendarIOS() {
+            if (!isIOS()) return;
+            // calcula altura disponível usando innerHeight (corrige problema da URL bar)
+            const headerFooter = 160; // ajustar conforme seu layout (botões + títulos)
+            const h = Math.max(360, Math.round(window.innerHeight - headerFooter - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-top')) || 0)));
+            try {
+                $('#calendar').fullCalendar('option', 'height', h);
+                $('#calendar').fullCalendar('render');
+            } catch (e) {
+                console.warn('Não foi possível ajustar altura do FullCalendar:', e);
+            }
+        }
+
+        window.addEventListener('orientationchange', function(){ setTimeout(ajustarAlturaCalendarIOS, 500); });
+        window.addEventListener('resize', function(){ setTimeout(ajustarAlturaCalendarIOS, 200); });
+
+        // executa após inicialização do calendar (ele já chama atualizarCalendario em mostrarSecao)
+        $(document).ready(function(){
+            setTimeout(ajustarAlturaCalendarIOS, 600);
+        });
+    })();
     </script>
 </body>
 </html>
