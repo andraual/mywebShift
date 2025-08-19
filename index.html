@@ -169,7 +169,8 @@
             }
         }
 
-        @media (max-width: 480px) {
+        /* alterado: breakpoint de 480px -> 390px */
+        @media (max-width: 390px) {
             h1 {
                 font-size: 20px; /* Reduz o tamanho do título */
             }
@@ -218,7 +219,7 @@
     .resumo-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .summary-item table {
         font-size: 13px;
-        table-layout: fixed;
+        /* table-layout: fixed;  <-- removido para comportamento fluido */
         min-width: 0;
         width: 100%;
         border-collapse: collapse;
@@ -227,7 +228,7 @@
         overflow: hidden;
     }
     .summary-item th, .summary-item td {
-        padding: 6px 8px;
+        padding: 6px 6px;
         text-align: left;
         vertical-align: middle;
         white-space: nowrap;
@@ -237,40 +238,45 @@
     }
     .summary-item thead th { background: rgba(255,77,148,0.04); font-weight:600; }
 
-    /* colunas pequenas: agora Horas é a 2ª coluna e Valor Total a 3ª coluna */
-    .summary-item th:nth-child(2),
-    .summary-item td:nth-child(2) { width: 64px; max-width: 64px; text-align:center; }
-    .summary-item th:nth-child(3),
-    .summary-item td:nth-child(3) { width: 120px; max-width: 140px; text-align:right; white-space: nowrap; }
-
-    /* reduz a coluna "Dia" */
+    /* Colunas mais estreitas */
     .summary-item th:nth-child(1),
-    .summary-item td:nth-child(1) { width: 90px; max-width: 90px; }
+    .summary-item td:nth-child(1) { /* Dia */
+        width: 30px;
+        max-width: 30px;
+        text-align: left;
+        padding-right: 8px;
+    }
 
-    /* responsividade: em telas menores diminuímos fonte/padding e apertamos colunas */
+    /* Horas e Valor Total (mantém compactos) */
+    .summary-item th:nth-child(2),
+    .summary-item td:nth-child(2) { /* Horas */
+        width: 30px;
+        max-width: 30px;
+        text-align: center;
+    }
+    .summary-item th:nth-child(3),
+    .summary-item td:nth-child(3) { /* Valor Total */
+        width: 30px;
+        max-width: 30px;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    /* responsividade ajustada para novos valores */
     @media (max-width: 1024px) {
-        .summary-item table { font-size: 12px; }
-        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 110px; max-width:120px; }
-        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 80px; }
-        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 56px; }
+        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 28px; max-width:28px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 44px; max-width:44px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 88px; max-width:88px; }
     }
-    @media (max-width: 768px) {
-        .summary-item table { font-size: 11px; }
-        .summary-item th, .summary-item td { padding: 5px 6px; }
-        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 100px; max-width:110px; }
-        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 70px; }
-        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 48px; }
-    }
-    @media (max-width: 480px) {
-        .summary-item table { font-size: 10px; }
-        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 88px; max-width:100px; font-size: 10px; }
-        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 64px; }
-        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 40px; }
+    /* alterado: breakpoint de 480px -> 390px */
+    @media (max-width: 390px) {
+        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 24px; max-width:24px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 36px; max-width:36px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 72px; max-width:72px; }
     }
 
-    /* garante que números não "empurrem" layout excessivamente */
+    /* garante que textos longos não quebrem layout */
     .summary-item td { overflow: hidden; text-overflow: ellipsis; }
-    .summary-item td.numeric { white-space: nowrap; }
 
     /* Ajustes de fonte / largura em pontos de quebra (mantendo tabela) */
     @media (max-width: 1024px) {
@@ -283,7 +289,7 @@
         .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 64px; }
         .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 48px; }
     }
-    @media (max-width: 480px) {
+    @media (max-width: 390px) {
         .summary-item table { font-size: 10px; min-width: 360px; }
         .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 56px; }
         .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 40px; }
@@ -314,7 +320,7 @@
     }
 
     /* inputs maiores no mobile */
-    @media (max-width: 480px) {
+    @media (max-width: 390px) {
         input, select, textarea, button {
             font-size: 16px;
         }
@@ -340,7 +346,82 @@
         -webkit-overflow-scrolling: touch;
     }
 
-    /* ...existing code... */
+    /* --- Responsividade para Resumo Financeiro --- */
+    .resumo-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 16px 0;
+    }
+    .summary-item table {
+      width: 100%;
+      min-width: 280px;     /* permite encolher em smartphones */
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .summary-item th, .summary-item td {
+      padding: 6px 8px;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-bottom: 1px solid #eee;
+    }
+    .summary-item thead th {
+      background: rgba(255,77,148,0.04);
+      font-weight: 600;
+    }
+
+    /* colunas com largura base para desktop */
+    .summary-item th:nth-child(1),
+    .summary-item td:nth-child(1) { width: 100px; }  /* Dia */
+    .summary-item th:nth-child(2),
+    .summary-item td:nth-child(2) { width: 60px; text-align:center; } /* Horas */
+    .summary-item th:nth-child(3),
+    .summary-item td:nth-child(3) { width: 120px; text-align:right; } /* Valor Total */
+
+    /* telas médias (tablets, laptops menores) */
+    @media (max-width: 1024px) {
+      .summary-item th, .summary-item td {
+        font-size: 13px;
+        padding: 5px 6px;
+      }
+      .summary-item th:nth-child(1),
+      .summary-item td:nth-child(1) { width: 80px; }
+      .summary-item th:nth-child(2),
+      .summary-item td:nth-child(2) { width: 50px; }
+      .summary-item th:nth-child(3),
+      .summary-item td:nth-child(3) { width: 100px; }
+    }
+
+    /* smartphones grandes e iPhone 15 Pro (~430px de largura) */
+    @media (max-width: 430px) {
+      .summary-item th, .summary-item td {
+        font-size: 12px;
+        padding: 4px 5px;
+      }
+      .summary-item th:nth-child(1),
+      .summary-item td:nth-child(1) { width: 60px; }
+      .summary-item th:nth-child(2),
+      .summary-item td:nth-child(2) { width: 40px; }
+      .summary-item th:nth-child(3),
+      .summary-item td:nth-child(3) { width: 90px; }
+    }
+
+    /* smartphones pequenos */
+    @media (max-width: 360px) {
+      .summary-item th, .summary-item td {
+        font-size: 11px;
+        padding: 3px 4px;
+      }
+      .summary-item th:nth-child(1),
+      .summary-item td:nth-child(1) { width:  fiftyFore; } 
+      .summary-item th:nth-child(2),
+      .summary-item td:nth-child(2) { width: 36px; }
+      .summary-item th:nth-child(3),
+      .summary-item td:nth-child(3) { width: 80px; }
+    }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
 </head>
