@@ -214,11 +214,12 @@
         /* --- adicione ao final do <style> existente --- */
     /* Responsividade para as tabelas do resumo: voltar ao comportamento de tabela
        e apenas redimensionar / permitir scroll horizontal em telas pequenas. */
+    /* ajustado: removida coluna "Entrada" e realinhado índices de colunas */
     .resumo-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .summary-item table {
         font-size: 13px;
         table-layout: fixed;
-        min-width: 520px;      /* reduzido para permitir melhor redimensionamento */
+        min-width: 0;
         width: 100%;
         border-collapse: collapse;
         background: #fff;
@@ -236,11 +237,40 @@
     }
     .summary-item thead th { background: rgba(255,77,148,0.04); font-weight:600; }
 
-    /* colunas pequenas (Entrada / Horas) */
+    /* colunas pequenas: agora Horas é a 2ª coluna e Valor Total a 3ª coluna */
     .summary-item th:nth-child(2),
-    .summary-item td:nth-child(2) { width: 80px; max-width: 80px; text-align:center; }
+    .summary-item td:nth-child(2) { width: 64px; max-width: 64px; text-align:center; }
     .summary-item th:nth-child(3),
-    .summary-item td:nth-child(3) { width: 64px; max-width: 64px; text-align:center; }
+    .summary-item td:nth-child(3) { width: 120px; max-width: 140px; text-align:right; white-space: nowrap; }
+
+    /* reduz a coluna "Dia" */
+    .summary-item th:nth-child(1),
+    .summary-item td:nth-child(1) { width: 90px; max-width: 90px; }
+
+    /* responsividade: em telas menores diminuímos fonte/padding e apertamos colunas */
+    @media (max-width: 1024px) {
+        .summary-item table { font-size: 12px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 110px; max-width:120px; }
+        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 80px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 56px; }
+    }
+    @media (max-width: 768px) {
+        .summary-item table { font-size: 11px; }
+        .summary-item th, .summary-item td { padding: 5px 6px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 100px; max-width:110px; }
+        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 70px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 48px; }
+    }
+    @media (max-width: 480px) {
+        .summary-item table { font-size: 10px; }
+        .summary-item th:nth-child(3), .summary-item td:nth-child(3) { width: 88px; max-width:100px; font-size: 10px; }
+        .summary-item th:nth-child(1), .summary-item td:nth-child(1) { width: 64px; }
+        .summary-item th:nth-child(2), .summary-item td:nth-child(2) { width: 40px; }
+    }
+
+    /* garante que números não "empurrem" layout excessivamente */
+    .summary-item td { overflow: hidden; text-overflow: ellipsis; }
+    .summary-item td.numeric { white-space: nowrap; }
 
     /* Ajustes de fonte / largura em pontos de quebra (mantendo tabela) */
     @media (max-width: 1024px) {
@@ -667,7 +697,6 @@
                                 <thead>
                                     <tr>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Dia</th>
-                                        <th style="border-bottom:1px solid #ccc; padding:4px;">Entrada</th>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Horas</th>
                                         <th style="border-bottom:1px solid #ccc; padding:4px;">Valor Total</th>
                                     </tr>
@@ -675,10 +704,9 @@
                                 <tbody>
                                     ${resumoPorLocal[local].plantoes.map(p => `
                                         <tr>
-                                            <td data-label="Dia" style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
-                                            <td data-label="Entrada" style="padding:4px;">${p.horaInicio || '-'}</td>
-                                            <td data-label="Horas" style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
-                                            <td data-label="Valor Total" style="padding:4px; text-align:right;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+                                            <td style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
+                                            <td style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
+                                            <td style="padding:4px; text-align:right;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
