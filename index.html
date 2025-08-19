@@ -838,7 +838,6 @@
                 return;
             }
 
-            // Busca apenas os plantões do usuário logado
             const snapshot = await db.collection("plantoes").where("userId", "==", user.uid).get();
             const resumoPorLocal = {};
 
@@ -854,17 +853,20 @@
                     resumoPorLocal[p.local].horas += horas;
                     resumoPorLocal[p.local].valor += valorTotal;
                     resumoPorLocal[p.local].plantoes.push({
+                        id: doc.id,
                         data: p.data,
                         horaInicio: p.horaInicio || '',
                         tempoPlantao: horas,
-                        valorTotal: valorTotal
+                        valorHora: valorHora,
+                        valorTotal: valorTotal,
+                        local: p.local,
+                        observacoes: p.observacoes || ''
                     });
                 }
             });
 
             let html = '';
             Object.keys(resumoPorLocal).forEach(local => {
-                // ordenar plantoes por data asc e entrada asc
                 resumoPorLocal[local].plantoes.sort((a, b) => {
                     if (a.data !== b.data) return a.data.localeCompare(b.data);
                     return (a.horaInicio || '').localeCompare(b.horaInicio || '');
@@ -883,14 +885,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${resumoPorLocal[local].plantoes.map(p => `
-                                        <tr>
-                                            <td style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
-                                            <td style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
-                                            <td style="padding:4px; text-align:right;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
+    ${resumoPorLocal[local].plantoes.map(p => `
+        <tr onclick="abrirPopupResumo('${p.id}')" style="cursor:pointer;">
+            <td style="padding:4px;">${p.data.split('-').reverse().join('/')}</td>
+            <td style="padding:4px; text-align:center;">${p.tempoPlantao}</td>
+            <td style="padding:4px; text-align:right;">${p.valorTotal ? 'R$ ' + Number(p.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '-'}</td>
+        </tr>
+    `).join('')}
+</tbody>
                             </table>
                         </div>
                         <p><strong>Total de horas:</strong> ${resumoPorLocal[local].horas}</p>
@@ -908,69 +910,6 @@
             // Atualiza o resumo total
             atualizarResumoTotal(resumoPorLocal);
         }
-
-        // Formulário de cadastro
-        document.getElementById('plantaoForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-
-            const data = document.getElementById('data').value;
-            const horaInicio = document.getElementById('horaInicio').value;
-            const tempoPlantao = document.getElementById('tempoPlantao').value;
-            const local = document.getElementById('local').value;
-            const valorHora = document.getElementById('valorHora').value;
-            const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
-            const valorCheio = document.getElementById('valorCheio').value;
-            const observacoes = document.getElementById('observacoes').value;
-
-            const user = firebase.auth().currentUser;
-            if (!user) {
-                alert("Usuário não autenticado!");
-                return;
-            }
-
-            let valorTotal;
-            let valorHoraFinal = valorHora;
-
-            if (valorCheioCheck && valorCheio) {
-                valorTotal = Number(valorCheio);
-                // Garante que valorHora seja recalculado corretamente
-                valorHoraFinal = (Number(valorCheio) / Number(tempoPlantao)).toFixed(2);
-            } else {
-                valorTotal = Number(valorHora) * Number(tempoPlantao);
-            }
-
-            const plantao = {
-                data,
-                horaInicio,
-                tempoPlantao,
-                local,
-                valorHora: valorHoraFinal,
-                valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
-                valorTotal,
-                observacoes,
-                userId: user.uid
-            };
-
-            try {
-                if (plantaoEditandoId) {
-                    // Atualiza o plantão existente
-                    await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
-                    console.log("Plantão atualizado com sucesso!");
-                    plantaoEditandoId = null; // Limpa o modo edição
-                } else {
-                    // Cria um novo plantão
-                    await db.collection("plantoes").add(plantao);
-                    console.log("Plantão cadastrado com sucesso!");
-                }
-                this.reset();
-                document.getElementById('valorCheioGroup').style.display = 'none';
-                document.getElementById('valorHora').disabled = false;
-                mostrarSecao('calendario');
-                window.atualizarCalendario();
-            } catch (error) {
-                console.error("Erro ao salvar plantão: ", error);
-            }
-        });
 
         // Login
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -1017,10 +956,12 @@
         document.getElementById('local').addEventListener('change', atualizarValorHora);
 
         let plantaoEditandoId = null;
+        let origemEdicao = null; // Variável para armazenar a origem da edição
 
-        async function editarPlantao(id) {
+        async function editarPlantao(id, origem) {
             fecharPopup();
-            plantaoEditandoId = id; // <-- Aqui
+            plantaoEditandoId = id; // Define o ID do plantão sendo editado
+            origemEdicao = origem; // Define a origem da edição (calendário ou financeiro)
 
             const doc = await db.collection("plantoes").doc(id).get();
             const plantao = doc.data();
@@ -1040,20 +981,99 @@
             mostrarSecao('cadastro');
         }
 
-        async function excluirPlantao(id) {
-            if (confirm("Tem certeza que deseja excluir este plantão?")) {
-                try {
-                    await db.collection("plantoes").doc(id).delete();
-                    // alert("Plantão excluído com sucesso!");
-                    fecharPopup(); // Fecha o popup após excluir
-                    window.atualizarCalendario(); // Atualiza o calendário
-                } catch (error) {
-                    console.error("Erro ao excluir plantão: ", error);
-                    alert("Erro ao excluir plantão.");
-                }
+        // Atualize a função de salvar o plantão para retornar à origem
+        document.getElementById('plantaoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const data = document.getElementById('data').value;
+            const horaInicio = document.getElementById('horaInicio').value;
+            const tempoPlantao = document.getElementById('tempoPlantao').value;
+            const local = document.getElementById('local').value;
+            const valorHora = document.getElementById('valorHora').value;
+            const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
+            const valorCheio = document.getElementById('valorCheio').value;
+            const observacoes = document.getElementById('observacoes').value;
+
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                alert("Usuário não autenticado!");
+                return;
             }
+
+            let valorTotal;
+            let valorHoraFinal = valorHora;
+
+            if (valorCheioCheck && valorCheio) {
+                valorTotal = Number(valorCheio);
+                valorHoraFinal = (Number(valorCheio) / Number(tempoPlantao)).toFixed(2);
+            } else {
+                valorTotal = Number(valorHora) * Number(tempoPlantao);
+            }
+
+            const plantao = {
+                data,
+                horaInicio,
+                tempoPlantao,
+                local,
+                valorHora: valorHoraFinal,
+                valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                valorTotal,
+                observacoes,
+                userId: user.uid
+            };
+
+            try {
+                if (plantaoEditandoId) {
+                    await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
+                    console.log("Plantão atualizado com sucesso!");
+                    plantaoEditandoId = null; // Limpa o modo edição
+                } else {
+                    await db.collection("plantoes").add(plantao);
+                    console.log("Plantão cadastrado com sucesso!");
+                }
+                this.reset();
+                document.getElementById('valorCheioGroup').style.display = 'none';
+                document.getElementById('valorHora').disabled = false;
+
+                // Retorna à origem após salvar
+                if (origemEdicao === 'calendario') {
+                    mostrarSecao('calendario');
+                    window.atualizarCalendario();
+                } else if (origemEdicao === 'resumo') {
+                    mostrarSecao('resumo');
+                    filtrarResumo();
+                }
+            } catch (error) {
+                console.error("Erro ao salvar plantão: ", error);
+            }
+        });
+
+        // Atualize os botões de editar para passar a origem
+        function abrirPopupResumo(plantaoId) {
+            const confirmacao = `
+                <div style="text-align: center;">
+                    <button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
+                    <button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>
+                    <button onclick="fecharPopup()">Cancelar</button>
+                </div>
+            `;
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.top = '50%';
+            modal.style.left = '50%';
+            modal.style.transform = 'translate(-50%, -50%)';
+            modal.style.background = 'white';
+            modal.style.padding = '20px';
+            modal.style.borderRadius = '8px';
+            modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            modal.style.zIndex = '9999';
+            modal.innerHTML = confirmacao;
+
+            modal.id = 'popupModal';
+            document.body.appendChild(modal);
         }
 
+        // Função para fechar o popup
         function fecharPopup() {
             const modal = document.getElementById('popupModal');
             if (modal) {
@@ -1134,6 +1154,50 @@ function atualizarResumoTotal(resumoPorLocal) {
 
     document.getElementById('totalHoras').textContent = totalHoras;
     document.getElementById('totalValor').textContent = totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+/* --- Modificação da função abrirPopupResumo --- */
+async function abrirPopupResumo(plantaoId) {
+    try {
+        const doc = await db.collection("plantoes").doc(plantaoId).get();
+        const plantao = doc.data();
+
+        if (!plantao) {
+            alert("Plantão não encontrado!");
+            return;
+        }
+
+        const confirmacao = `
+            <div style="text-align: center;">
+                <p><strong>Data:</strong> ${plantao.data.split('-').reverse().join('/')}</p>
+                <p><strong>Local:</strong> ${plantao.local}</p>
+                <p><strong>Valor por Hora:</strong> R$ ${plantao.valorHora}</p>
+                <p><strong>Valor Total:</strong> R$ ${plantao.valorTotal}</p>
+                <p><strong>Observações:</strong> ${plantao.observacoes || 'Nenhuma'}</p>
+                <button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
+                <button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>
+                <button onclick="fecharPopup()">Cancelar</button>
+            </div>
+        `;
+
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '50%';
+        modal.style.left = '50%';
+        modal.style.transform = 'translate(-50%, -50%)';
+        modal.style.background = 'white';
+        modal.style.padding = '20px';
+        modal.style.borderRadius = '8px';
+        modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+        modal.style.zIndex = '9999'; // Garante que o modal fique acima de outros elementos
+        modal.innerHTML = confirmacao;
+
+        modal.id = 'popupModal'; // Adiciona um ID ao modal para facilitar a manipulação
+        document.body.appendChild(modal);
+    } catch (error) {
+        console.error("Erro ao buscar plantão:", error);
+        alert("Erro ao buscar informações do plantão.");
+    }
 }
     </script>
     <!-- Ajustes runtime específicos para iPhone / iOS Safari -->
