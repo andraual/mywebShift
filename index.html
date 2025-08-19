@@ -668,6 +668,13 @@
             <div id="resumoContent">
                 <!-- Aqui será carregado o resumo financeiro -->
             </div>
+
+            <!-- Adicione este bloco ao final da seção de Resumo Financeiro -->
+            <div id="resumoTotal" style="margin-top: 20px; padding: 20px; background: #fff5f9; border-radius: 10px; box-shadow: 0 6px 18px rgba(255, 102, 170, 0.1); text-align: center;">
+                <h3 style="font-size: 24px; font-weight: 700; color: #ff4d94;">Resumo Total</h3>
+                <p style="font-size: 18px; margin: 10px 0;"><strong>Total de Horas:</strong> <span id="totalHoras">0</span></p>
+                <p style="font-size: 18px; margin: 10px 0;"><strong>Valor Total:</strong> R$ <span id="totalValor">0,00</span></p>
+            </div>
         </div>
     </div>
 
@@ -897,6 +904,9 @@
             }
 
             resumoContent.innerHTML = html;
+
+            // Atualiza o resumo total
+            atualizarResumoTotal(resumoPorLocal);
         }
 
         // Formulário de cadastro
@@ -1110,6 +1120,20 @@ function setResumoDefaults() {
         }
         anoSelect.value = ano;
     }
+}
+
+/* --- Adicionado: função para atualizar o resumo total --- */
+function atualizarResumoTotal(resumoPorLocal) {
+    let totalHoras = 0;
+    let totalValor = 0;
+
+    Object.keys(resumoPorLocal).forEach(local => {
+        totalHoras += resumoPorLocal[local].horas;
+        totalValor += resumoPorLocal[local].valor;
+    });
+
+    document.getElementById('totalHoras').textContent = totalHoras;
+    document.getElementById('totalValor').textContent = totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 }
     </script>
     <!-- Ajustes runtime específicos para iPhone / iOS Safari -->
