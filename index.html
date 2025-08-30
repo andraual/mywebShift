@@ -416,7 +416,7 @@
         padding: 3px 4px;
       }
       .summary-item th:nth-child(1),
-      .summary-item td:nth-child(1) { width:  fiftyFore; } 
+      .summary-item td:nth-child(1) { width: 52px; } 
       .summary-item th:nth-child(2),
       .summary-item td:nth-child(2) { width: 36px; }
       .summary-item th:nth-child(3),
@@ -727,7 +727,25 @@
         function mostrarAppLogado(logado) {
             document.getElementById('login').style.display = logado ? 'none' : 'flex';
             document.querySelector('.container').style.display = logado ? 'block' : 'none';
+
             if (logado) {
+                const user = firebase.auth().currentUser;
+                const isContador = user.email === 'contador@contador.com';
+
+                // Mostra apenas o botão financeiro para o contador
+                if (isContador) {
+                    document.querySelectorAll('.main-btn').forEach(btn => {
+                        if (!btn.title.includes('Financeiro')) {
+                            btn.style.display = 'none';
+                        }
+                    });
+                } else {
+                    // Mostra todos os botões para outros usuários
+                    document.querySelectorAll('.main-btn').forEach(btn => {
+                        btn.style.display = 'flex';
+                    });
+                }
+
                 mostrarSecao('inicio');
             }
         }
@@ -1037,14 +1055,28 @@
                 document.getElementById('valorCheioGroup').style.display = 'none';
                 document.getElementById('valorHora').disabled = false;
 
-                // Pergunta ao usuário o próximo passo
-                const continuar = confirm("Deseja cadastrar outro plantão? Clique em 'Cancelar' para ir para a tela de boas-vindas.");
-                if (continuar) {
-                    // Permanece na tela de cadastro para novo plantão
-                } else {
-                    // Redireciona para a tela de boas-vindas
-                    mostrarSecao('inicio');
-                }
+                // Exibe o popup com as opções "Novo Plantão" ou "Cancelar"
+                const confirmacao = `
+                    <div style="text-align: center;">
+                        <p>Plantão cadastrado com sucesso!</p>
+                        <button onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
+                        <button onclick="fecharPopup(); mostrarSecao('inicio');">Cancelar</button>
+                    </div>
+                `;
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '50%';
+                modal.style.left = '50%';
+                modal.style.transform = 'translate(-50%, -50%)';
+                modal.style.background = 'white';
+                modal.style.padding = '20px';
+                modal.style.borderRadius = '8px';
+                modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+                modal.style.zIndex = '9999'; // Garante que o modal fique acima de outros elementos
+                modal.innerHTML = confirmacao;
+
+                modal.id = 'popupModal'; // Adiciona um ID ao modal para facilitar a manipulação
+                document.body.appendChild(modal);
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
             }
@@ -1169,6 +1201,9 @@ async function abrirPopupResumo(plantaoId) {
             return;
         }
 
+        const user = firebase.auth().currentUser;
+        const isContador = user.email === 'contador@contador.com';
+
         const confirmacao = `
             <div style="text-align: center;">
                 <p><strong>Data:</strong> ${plantao.data.split('-').reverse().join('/')}</p>
@@ -1177,7 +1212,7 @@ async function abrirPopupResumo(plantaoId) {
                 <p><strong>Valor Total:</strong> R$ ${plantao.valorTotal}</p>
                 <p><strong>Observações:</strong> ${plantao.observacoes || 'Nenhuma'}</p>
                 <button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
-                <button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>
+                ${!isContador ? `<button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>` : ''}
                 <button onclick="fecharPopup()">Cancelar</button>
             </div>
         `;
