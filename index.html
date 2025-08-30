@@ -1031,17 +1031,19 @@
                     await db.collection("plantoes").add(plantao);
                     console.log("Plantão cadastrado com sucesso!");
                 }
+
+                // Limpa os campos do formulário
                 this.reset();
                 document.getElementById('valorCheioGroup').style.display = 'none';
                 document.getElementById('valorHora').disabled = false;
 
-                // Retorna à origem após salvar
-                if (origemEdicao === 'calendario') {
-                    mostrarSecao('calendario');
-                    window.atualizarCalendario();
-                } else if (origemEdicao === 'resumo') {
-                    mostrarSecao('resumo');
-                    filtrarResumo();
+                // Pergunta ao usuário o próximo passo
+                const continuar = confirm("Deseja cadastrar outro plantão? Clique em 'Cancelar' para ir para a tela de boas-vindas.");
+                if (continuar) {
+                    // Permanece na tela de cadastro para novo plantão
+                } else {
+                    // Redireciona para a tela de boas-vindas
+                    mostrarSecao('inicio');
                 }
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
@@ -1197,6 +1199,24 @@ async function abrirPopupResumo(plantaoId) {
     } catch (error) {
         console.error("Erro ao buscar plantão:", error);
         alert("Erro ao buscar informações do plantão.");
+    }
+}
+
+/* --- Adicionada função excluirPlantao --- */
+async function excluirPlantao(plantaoId) {
+    try {
+        const confirmacao = confirm("Tem certeza que deseja excluir este plantão?");
+        if (!confirmacao) return;
+
+        await db.collection("plantoes").doc(plantaoId).delete();
+
+        // Remove o popup após exclusão
+        fecharPopup();
+
+        // Redireciona para a tela de bem-vindo
+        mostrarSecao('inicio');
+    } catch (error) {
+        console.error("Erro ao excluir plantão:", error);
     }
 }
     </script>
