@@ -594,12 +594,12 @@
                 <div class="form-group">
                     <label for="tempoPlantao">Tempo de Plantão (horas):</label>
                     <input type="number" id="tempoPlantao" step="0.1" required>
-                </div>
-                <div class="form-group">
+                </div>                <div class="form-group">
                     <label for="local">Local:</label>
                     <select id="local" required>
                         <option value="Intermedica Diadema">Intermedica Diadema</option>
                         <option value="Beneficência Portuguesa SC">Beneficência Portuguesa SC</option>
+                        <option value="Hospital Christóvão da Gama Diadema">Hospital Christóvão da Gama Diadema</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -956,13 +956,13 @@
             // Descobre o dia da semana (0=Domingo, 6=Sábado)
             const partes = data.split('-');
             const dataObj = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
-            const diaSemana = dataObj.getDay();
-
-            let valor = '';
+            const diaSemana = dataObj.getDay();            let valor = '';
             if (local === 'Intermedica Diadema') {
                 valor = (diaSemana === 0 || diaSemana === 6) ? 125 : 114;
             } else if (local === 'Beneficência Portuguesa SC') {
                 valor = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
+            } else if (local === 'Hospital Christóvão da Gama Diadema') {
+                valor = 125; // Valor fixo de R$ 125,00 para todos os dias
             }
             valorHoraInput.value = valor;
         }
