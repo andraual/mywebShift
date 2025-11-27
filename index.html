@@ -1073,40 +1073,58 @@
         });
         document.getElementById('local').addEventListener('change', atualizarValorHora);        // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
         function obterPosicaoSemanaNoMes(data) {
-            const primeiroDiaMes = new Date(data.getFullYear(), data.getMonth(), 1);
             const diaSemana = data.getDay();
             const diaDoMes = data.getDate();
+            const ano = data.getFullYear();
+            const mes = data.getMonth();
             
-            // Encontra a primeira ocorrência deste dia da semana no mês
-            let primeiroDiaSemana = 1;
-            while (new Date(data.getFullYear(), data.getMonth(), primeiroDiaSemana).getDay() !== diaSemana) {
-                primeiroDiaSemana++;
+            // Conta quantas vezes este dia da semana ocorreu até a data atual
+            let contador = 0;
+            for (let dia = 1; dia <= diaDoMes; dia++) {
+                const dataAtual = new Date(ano, mes, dia);
+                if (dataAtual.getDay() === diaSemana) {
+                    contador++;
+                    if (dia === diaDoMes) {
+                        return contador;
+                    }
+                }
             }
-            
-            // Calcula qual é a posição (1ª, 2ª, 3ª, etc.)
-            const posicao = Math.floor((diaDoMes - primeiroDiaSemana) / 7) + 1;
-            return posicao;
-        }
-
-        // Função auxiliar para encontrar uma data específica baseada na posição da semana
+            return contador;
+        }        // Função auxiliar para encontrar uma data específica baseada na posição da semana
         function obterDataPorPosicaoSemana(ano, mes, diaSemana, posicao) {
-            // Encontra a primeira ocorrência do dia da semana no mês
-            let dia = 1;
-            while (new Date(ano, mes, dia).getDay() !== diaSemana) {
-                dia++;
+            let contador = 0;
+            
+            // Itera através de todos os dias do mês
+            for (let dia = 1; dia <= 31; dia++) {
+                const data = new Date(ano, mes, dia);
+                
+                // Se saiu do mês, não existe esta posição
+                if (data.getMonth() !== mes) {
+                    // Se estamos procurando pela última ocorrência (5ª) e não encontramos,
+                    // retorna a última ocorrência que encontramos
+                    if (posicao >= 5 && contador > 0) {
+                        // Procura a última ocorrência do dia da semana no mês
+                        for (let diaReverso = 31; diaReverso >= 1; diaReverso--) {
+                            const dataReversa = new Date(ano, mes, diaReverso);
+                            if (dataReversa.getMonth() === mes && dataReversa.getDay() === diaSemana) {
+                                return dataReversa;
+                            }
+                        }
+                    }
+                    return null;
+                }
+                
+                // Se encontrou o dia da semana correto
+                if (data.getDay() === diaSemana) {
+                    contador++;
+                    if (contador === posicao) {
+                        return data;
+                    }
+                }
             }
             
-            // Adiciona semanas para chegar na posição desejada
-            dia += (posicao - 1) * 7;
-            
-            // Verifica se a data existe neste mês
-            const data = new Date(ano, mes, dia);
-            if (data.getMonth() !== mes) {
-                return null; // Não existe (ex: 5ª segunda-feira em um mês que só tem 4)
-            }
-            
-            return data;
-        }        // Função para calcular datas de recorrência
+            return null; // Não encontrou a posição
+        }// Função para calcular datas de recorrência
         function calcularDatasRecorrencia() {
             const dataInicial = new Date(document.getElementById('data').value);
             const tipo = document.getElementById('tipoRecorrencia').value;
