@@ -1071,7 +1071,15 @@
             atualizarValorHora();
             atualizarInfoRecorrencia();
         });
-        document.getElementById('local').addEventListener('change', atualizarValorHora);        // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
+        document.getElementById('local').addEventListener('change', atualizarValorHora);        // Função auxiliar para formatar data no formato brasileiro sem problemas de fuso horário
+        function formatarDataBR(data) {
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
         function obterPosicaoSemanaNoMes(data) {
             const diaSemana = data.getDay();
             const diaDoMes = data.getDate();
@@ -1090,7 +1098,7 @@
                 }
             }
             return contador;
-        }        // Função auxiliar para encontrar uma data específica baseada na posição da semana
+        }// Função auxiliar para encontrar uma data específica baseada na posição da semana
         function obterDataPorPosicaoSemana(ano, mes, diaSemana, posicao) {
             let contador = 0;
             
@@ -1510,21 +1518,19 @@ function atualizarInfoRecorrencia() {
         texto += `Toda ${posicoes[posicao]} ${diasSemana[dataInicial.getDay()]} do mês`;
     }
       const datasCalculadas = calcularDatasRecorrencia();
-    
-    if (dataFim) {
+      if (dataFim) {
         const dataLimite = new Date(dataFim);
-        texto += ` até ${dataLimite.toLocaleDateString('pt-BR')} (${datasCalculadas.length} plantões)`;
+        texto += ` até ${formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
     } else if (quantidade) {
         if (datasCalculadas.length > 0) {
             const ultimaData = datasCalculadas[datasCalculadas.length - 1];
-            texto += ` (${datasCalculadas.length} plantões até ${ultimaData.toLocaleDateString('pt-BR')})`;
+            texto += ` (${datasCalculadas.length} plantões até ${formatarDataBR(ultimaData)})`;
         }
     }
-    
-    // Adiciona preview das próximas datas
+      // Adiciona preview das próximas datas
     if (datasCalculadas.length > 0) {
         texto += '<br><small style="color: #888;">Próximas datas: ';
-        const proximasDatas = datasCalculadas.slice(0, 3).map(d => d.toLocaleDateString('pt-BR'));
+        const proximasDatas = datasCalculadas.slice(0, 3).map(d => formatarDataBR(d));
         texto += proximasDatas.join(', ');
         if (datasCalculadas.length > 3) {
             texto += `, ... (+${datasCalculadas.length - 3} mais)`;
