@@ -67,13 +67,13 @@
         }
         .full-width {
             grid-column: 1 / -1;
-        }
-        #calendar {
+        }        #calendar {
             width: 100%;
-            /* altura mínima maior para evitar corte das linhas do mês */
+            /* altura flexível que se adapta ao conteúdo */
             min-height: 520px;
-            /* permite rolagem se necessário e evita que elementos sejam escondidos */
-            overflow: auto;
+            height: auto;
+            /* remove rolagem para permitir expansão completa */
+            overflow: visible;
             z-index: 1;
         }
         .tab-content {
@@ -146,9 +146,7 @@
             color: #333;
             padding:8px 12px;
             border-radius:10px;
-        }
-
-        /* Responsividade para telas menores */
+        }        /* Responsividade para telas menores */
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -165,7 +163,10 @@
                 gap: 20px;
             }
             #calendar {
-                height: 400px; /* Reduz a altura do calendário em telas menores */
+                /* Remove altura fixa e permite expansão automática */
+                height: auto !important;
+                min-height: 400px;
+                overflow: visible !important;
             }
         }
 
@@ -328,9 +329,11 @@
             min-height: 84px;
             padding: 14px;
             min-width: 140px;
-        }
-        #calendar {
-            min-height: 420px; /* um pouco menor para telas iPhone */
+        }        #calendar {
+            /* Permite altura automática em dispositivos móveis */
+            height: auto !important;
+            min-height: 350px;
+            overflow: visible !important;
         }
         .summary-item table { min-width: 360px; font-size: 11px; }
     }
@@ -339,11 +342,30 @@
     .resumo-wrapper {
         -webkit-overflow-scrolling: touch;
         overflow-x: auto;
-    }
-
-    /* evita que o calendário fique "cortado" em iOS quando a URL bar some/aparece */
-    .fc-scroller { /* fullcalendar v3 uses internal scroller class on some views */
+    }    /* Ajustes específicos do FullCalendar para dispositivos móveis */
+    .fc-scroller { 
         -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Remove barras de rolagem do calendário em dispositivos móveis */
+    @media (max-width: 768px) {
+        .fc-view-container,
+        .fc-view,
+        .fc-month-view,
+        .fc-scroller {
+            overflow: visible !important;
+            height: auto !important;
+        }
+        
+        .fc-day-grid-container {
+            height: auto !important;
+        }
+        
+        /* Garante que o calendário se expanda completamente */
+        .fc-month-view .fc-bg table,
+        .fc-month-view .fc-content-skeleton table {
+            height: auto !important;
+        }
     }
 
     /* --- Responsividade para Resumo Financeiro --- */
@@ -774,14 +796,21 @@
                 });
             });
             return eventos;
-        }
-
-        // Inicializa o calendário
+        }        // Inicializa o calendário
         $(document).ready(function() {
-            // calcula altura inicial (garante um mínimo)
-            const initialCalendarHeight = Math.max(520, $(window).height() - 220);
+            // Função para calcular altura do calendário baseada no dispositivo
+            function getCalendarHeight() {
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    // Em dispositivos móveis, usa altura automática
+                    return 'auto';
+                } else {
+                    // Em desktop, mantém altura calculada
+                    return Math.max(520, $(window).height() - 220);
+                }
+            }
 
-            // Inicializa o calendário vazio com height fixo calculado
+            // Inicializa o calendário com altura responsiva
             $('#calendar').fullCalendar({
                 locale: 'pt-br',
                 header: {
@@ -793,7 +822,8 @@
                 editable: false,
                 eventLimit: true,
                 events: [],
-                height: initialCalendarHeight,
+                height: getCalendarHeight(),
+                aspectRatio: window.innerWidth <= 768 ? 1.2 : 1.35,
                 eventClick: function(calEvent, jsEvent, view) {
                     const confirmacao = `
                         <div style="text-align: center;">
@@ -829,13 +859,20 @@
                 const eventos = await buscarPlantoes();
                 $('#calendar').fullCalendar('removeEvents');
                 $('#calendar').fullCalendar('addEventSource', eventos);
-            };
-
-            // Ajusta altura do calendário ao redimensionar a janela (mantém mínimo)
+            };            // Ajusta altura do calendário ao redimensionar a janela
             $(window).on('resize', function() {
-                const h = Math.max(520, $(window).height() - 220);
+                const isMobile = window.innerWidth <= 768;
                 try {
-                    $('#calendar').fullCalendar('option', 'height', h);
+                    if (isMobile) {
+                        // Em dispositivos móveis, usa altura automática
+                        $('#calendar').fullCalendar('option', 'height', 'auto');
+                        $('#calendar').fullCalendar('option', 'aspectRatio', 1.2);
+                    } else {
+                        // Em desktop, usa altura calculada
+                        const h = Math.max(520, $(window).height() - 220);
+                        $('#calendar').fullCalendar('option', 'height', h);
+                        $('#calendar').fullCalendar('option', 'aspectRatio', 1.35);
+                    }
                     $('#calendar').fullCalendar('render');
                 } catch (e) {
                     console.warn('Erro ao ajustar altura do FullCalendar:', e);
@@ -1252,34 +1289,54 @@ async function excluirPlantao(plantaoId) {
         console.error("Erro ao excluir plantão:", error);
     }
 }
-    </script>
-    <!-- Ajustes runtime específicos para iPhone / iOS Safari -->
+    </script>    <!-- Ajustes runtime específicos para dispositivos móveis -->
     <script>
     (function(){
-        function isIOS() {
-            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        function isMobileDevice() {
+            return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
 
-        function ajustarAlturaCalendarIOS() {
-            if (!isIOS()) return;
-            // calcula altura disponível usando innerHeight (corrige problema da URL bar)
-            const headerFooter = 160; // ajustar conforme seu layout (botões + títulos)
-            const h = Math.max(360, Math.round(window.innerHeight - headerFooter - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-top')) || 0)));
+        function ajustarCalendarioMobile() {
+            if (!isMobileDevice()) return;
+            
             try {
-                $('#calendar').fullCalendar('option', 'height', h);
+                // Em dispositivos móveis, força altura automática sem barras de rolagem
+                $('#calendar').fullCalendar('option', 'height', 'auto');
+                $('#calendar').fullCalendar('option', 'aspectRatio', 1.1);
                 $('#calendar').fullCalendar('render');
+                
+                // Remove qualquer overflow dos containers do FullCalendar
+                $('.fc-view-container, .fc-view, .fc-month-view').css({
+                    'overflow': 'visible',
+                    'height': 'auto'
+                });
             } catch (e) {
-                console.warn('Não foi possível ajustar altura do FullCalendar:', e);
+                console.warn('Não foi possível ajustar calendário mobile:', e);
             }
         }
 
-        window.addEventListener('orientationchange', function(){ setTimeout(ajustarAlturaCalendarIOS, 500); });
-        window.addEventListener('resize', function(){ setTimeout(ajustarAlturaCalendarIOS, 200); });
-
-        // executa após inicialização do calendar (ele já chama atualizarCalendario em mostrarSecao)
-        $(document).ready(function(){
-            setTimeout(ajustarAlturaCalendarIOS, 600);
+        // Aguarda orientação e redimensionamento
+        window.addEventListener('orientationchange', function(){ 
+            setTimeout(ajustarCalendarioMobile, 600); 
         });
+        
+        window.addEventListener('resize', function(){ 
+            setTimeout(ajustarCalendarioMobile, 300); 
+        });
+
+        // Executa após carregamento completo do calendário
+        $(document).ready(function(){
+            setTimeout(ajustarCalendarioMobile, 800);
+        });
+        
+        // Executa quando mostrar a seção do calendário
+        const originalMostrarSecao = window.mostrarSecao;
+        window.mostrarSecao = function(secao) {
+            originalMostrarSecao(secao);
+            if (secao === 'calendario') {
+                setTimeout(ajustarCalendarioMobile, 300);
+            }
+        };
     })();
     </script>
 </body>
