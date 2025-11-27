@@ -64,10 +64,49 @@
         }
         button:hover {
             opacity: 0.95;
-        }
-        .full-width {
+        }        .full-width {
             grid-column: 1 / -1;
-        }        #calendar {
+        }
+        
+        /* Estilos para recorrência */
+        #recorrenciaGroup {
+            background: linear-gradient(180deg, #fff9fc, #fff);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 102, 170, 0.15);
+            margin-top: 10px;
+        }
+        
+        #recorrenciaGroup .form-group {
+            margin-bottom: 12px;
+        }
+          .recorrencia-info {
+            background: rgba(255, 102, 170, 0.05);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        /* Destaque quando recorrência está ativa */
+        #recorrenteCheck:checked + label {
+            color: #ff4d94;
+            font-weight: 600;
+        }
+        
+        .form-group button[type="submit"] {
+            background: linear-gradient(90deg, #ff7bb3 0%, #ff4d94 100%);
+            transition: all 0.2s ease;
+        }
+        
+        #recorrenteCheck:checked ~ .full-width button[type="submit"] {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+        }
+        
+        #recorrenteCheck:checked ~ .full-width button[type="submit"]::after {
+            content: " (Múltiplos)";
+        }#calendar {
             width: 100%;
             /* altura flexível que se adapta ao conteúdo */
             min-height: 520px;
@@ -627,14 +666,34 @@
                 <div class="form-group">
                     <label for="valorHora">Valor por Hora (R$):</label>
                     <input type="number" id="valorHora" step="0.01" required>
-                </div>
-                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                </div>                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" id="valorCheioCheck" style="width:auto;">
                     <label for="valorCheioCheck" style="margin:0;">Informar valor cheio do plantão</label>
                 </div>
                 <div class="form-group" id="valorCheioGroup" style="display:none;">
                     <label for="valorCheio">Valor Cheio do Plantão (R$):</label>
                     <input type="number" id="valorCheio" step="0.01">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="recorrenteCheck" style="width:auto;">
+                    <label for="recorrenteCheck" style="margin:0;">Plantão recorrente</label>
+                </div>
+                <div id="recorrenciaGroup" style="display:none; grid-column: 1 / -1;">                    <div class="form-group">
+                        <label for="tipoRecorrencia">Tipo de Recorrência:</label>
+                        <select id="tipoRecorrencia">
+                            <option value="semanal">Semanal (toda semana no mesmo dia)</option>
+                            <option value="quinzenal">Quinzenal (semana sim, semana não)</option>
+                            <option value="mensal">Mensal (mesma semana do mês)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantidadeRecorrencia">Quantas vezes repetir:</label>
+                        <input type="number" id="quantidadeRecorrencia" min="1" max="52" value="4" placeholder="Ex: 4 (criará 4 plantões)">
+                    </div>
+                    <div class="form-group">
+                        <label for="dataFim">Ou definir data limite:</label>
+                        <input type="date" id="dataFim" placeholder="Opcional - limite máximo">
+                    </div>
                 </div>
                 <div class="form-group full-width">
                     <label for="observacoes">Observações:</label>
@@ -721,9 +780,13 @@
             if (secao === 'resumo') {
                 setResumoDefaults(); // <-- define mês/ano atual antes de filtrar
                 filtrarResumo();
-            }
-            if (secao === 'inicio') {
+            }            if (secao === 'inicio') {
                 plantaoEditandoId = null;
+            }
+            if (secao === 'cadastro' && !plantaoEditandoId) {
+                // Reabilita recorrência para novo plantão
+                document.getElementById('recorrenteCheck').disabled = false;
+                document.querySelector('#cadastro h2').textContent = 'Cadastrar Novo Plantão';
             }
         }
 
@@ -988,29 +1051,149 @@
             if (!data || !local) {
                 valorHoraInput.value = '';
                 return;
-            }
-
-            // Descobre o dia da semana (0=Domingo, 6=Sábado)
+            }            // Descobre o dia da semana (0=Domingo, 6=Sábado)
             const partes = data.split('-');
             const dataObj = new Date(Number(partes[0]), Number(partes[1]) - 1, Number(partes[2]));
-            const diaSemana = dataObj.getDay();            let valor = '';
+            const diaSemana = dataObj.getDay();
+            
+            let valor = '';
             if (local === 'Intermedica Diadema') {
                 valor = (diaSemana === 0 || diaSemana === 6) ? 125 : 114;
             } else if (local === 'Beneficência Portuguesa SC') {
                 valor = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
             } else if (local === 'Hospital Christóvão da Gama Diadema') {
                 valor = 125; // Valor fixo de R$ 125,00 para todos os dias
+            }            valorHoraInput.value = valor;
+        }
+        
+        // Adiciona listeners para atualizar o valor ao mudar data ou local
+        document.getElementById('data').addEventListener('change', function() {
+            atualizarValorHora();
+            atualizarInfoRecorrencia();
+        });
+        document.getElementById('local').addEventListener('change', atualizarValorHora);        // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
+        function obterPosicaoSemanaNoMes(data) {
+            const primeiroDiaMes = new Date(data.getFullYear(), data.getMonth(), 1);
+            const diaSemana = data.getDay();
+            const diaDoMes = data.getDate();
+            
+            // Encontra a primeira ocorrência deste dia da semana no mês
+            let primeiroDiaSemana = 1;
+            while (new Date(data.getFullYear(), data.getMonth(), primeiroDiaSemana).getDay() !== diaSemana) {
+                primeiroDiaSemana++;
             }
-            valorHoraInput.value = valor;
+            
+            // Calcula qual é a posição (1ª, 2ª, 3ª, etc.)
+            const posicao = Math.floor((diaDoMes - primeiroDiaSemana) / 7) + 1;
+            return posicao;
         }
 
-        // Adiciona listeners para atualizar o valor ao mudar data ou local
-        document.getElementById('data').addEventListener('change', atualizarValorHora);
-        document.getElementById('local').addEventListener('change', atualizarValorHora);
-
-        let plantaoEditandoId = null;
+        // Função auxiliar para encontrar uma data específica baseada na posição da semana
+        function obterDataPorPosicaoSemana(ano, mes, diaSemana, posicao) {
+            // Encontra a primeira ocorrência do dia da semana no mês
+            let dia = 1;
+            while (new Date(ano, mes, dia).getDay() !== diaSemana) {
+                dia++;
+            }
+            
+            // Adiciona semanas para chegar na posição desejada
+            dia += (posicao - 1) * 7;
+            
+            // Verifica se a data existe neste mês
+            const data = new Date(ano, mes, dia);
+            if (data.getMonth() !== mes) {
+                return null; // Não existe (ex: 5ª segunda-feira em um mês que só tem 4)
+            }
+            
+            return data;
+        }        // Função para calcular datas de recorrência
+        function calcularDatasRecorrencia() {
+            const dataInicial = new Date(document.getElementById('data').value);
+            const tipo = document.getElementById('tipoRecorrencia').value;
+            const quantidade = parseInt(document.getElementById('quantidadeRecorrencia').value) || 4;
+            const dataFimInput = document.getElementById('dataFim').value;
+            const dataFim = dataFimInput ? new Date(dataFimInput) : null;
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0); // Remove horário para comparar apenas datas
+            
+            const datas = [];
+            const diaSemana = dataInicial.getDay(); // 0=Domingo, 1=Segunda, etc.
+            
+            if (tipo === 'semanal') {
+                // Semanal: toda semana no mesmo dia
+                let dataAtual = new Date(dataInicial);
+                
+                for (let i = 0; i < quantidade; i++) {
+                    if (dataFim && dataAtual > dataFim) break;
+                    if (dataAtual >= hoje) {
+                        datas.push(new Date(dataAtual));
+                    }
+                    dataAtual.setDate(dataAtual.getDate() + 7);
+                }
+                
+            } else if (tipo === 'quinzenal') {
+                // Quinzenal: semana sim, semana não (a cada 14 dias)
+                let dataAtual = new Date(dataInicial);
+                
+                for (let i = 0; i < quantidade; i++) {
+                    if (dataFim && dataAtual > dataFim) break;
+                    if (dataAtual >= hoje) {
+                        datas.push(new Date(dataAtual));
+                    }
+                    dataAtual.setDate(dataAtual.getDate() + 14);
+                }
+                  } else if (tipo === 'mensal') {
+                // Mensal: mesma posição da semana no mês (ex: toda 3ª quarta-feira)
+                const posicaoSemana = obterPosicaoSemanaNoMes(dataInicial);
+                let mesAtual = dataInicial.getMonth();
+                let anoAtual = dataInicial.getFullYear();
+                let plantoesCriados = 0;
+                
+                // Primeiro, adiciona a data inicial se for válida
+                if (dataInicial >= hoje) {
+                    datas.push(new Date(dataInicial));
+                    plantoesCriados++;
+                }
+                
+                // Avança para o próximo mês
+                mesAtual++;
+                if (mesAtual > 11) {
+                    mesAtual = 0;
+                    anoAtual++;
+                }
+                
+                // Continua criando os plantões restantes
+                while (plantoesCriados < quantidade) {
+                    const dataCalculada = obterDataPorPosicaoSemana(anoAtual, mesAtual, diaSemana, posicaoSemana);
+                    
+                    if (!dataCalculada) {
+                        // Se não existe esta posição no mês (ex: 5ª segunda), pula para o próximo mês
+                        mesAtual++;
+                        if (mesAtual > 11) {
+                            mesAtual = 0;
+                            anoAtual++;
+                        }
+                        continue;
+                    }
+                    
+                    if (dataFim && dataCalculada > dataFim) break;
+                    
+                    datas.push(new Date(dataCalculada));
+                    plantoesCriados++;
+                    
+                    // Avança para o próximo mês
+                    mesAtual++;
+                    if (mesAtual > 11) {
+                        mesAtual = 0;
+                        anoAtual++;
+                    }
+                }
+            }
+            
+            return datas;
+        }let plantaoEditandoId = null;
         let origemEdicao = null; // Variável para armazenar a origem da edição
-
+        
         async function editarPlantao(id, origem) {
             fecharPopup();
             plantaoEditandoId = id; // Define o ID do plantão sendo editado
@@ -1031,9 +1214,18 @@
             document.getElementById('valorHora').value = plantao.valorHora;
             document.getElementById('observacoes').value = plantao.observacoes;
 
+            // Desabilita recorrência no modo edição
+            document.getElementById('recorrenteCheck').checked = false;
+            document.getElementById('recorrenteCheck').disabled = true;
+            document.getElementById('recorrenciaGroup').style.display = 'none';
+            
+            // Adiciona aviso sobre edição
+            const formTitle = document.querySelector('#cadastro h2');
+            formTitle.textContent = 'Editar Plantão';
+
             mostrarSecao('cadastro');
         }
-
+        
         // Atualize a função de salvar o plantão para retornar à origem
         document.getElementById('plantaoForm').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -1046,6 +1238,7 @@
             const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
             const valorCheio = document.getElementById('valorCheio').value;
             const observacoes = document.getElementById('observacoes').value;
+            const recorrenteCheck = document.getElementById('recorrenteCheck').checked;
 
             const user = firebase.auth().currentUser;
             if (!user) {
@@ -1063,59 +1256,128 @@
                 valorTotal = Number(valorHora) * Number(tempoPlantao);
             }
 
-            const plantao = {
-                data,
-                horaInicio,
-                tempoPlantao,
-                local,
-                valorHora: valorHoraFinal,
-                valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
-                valorTotal,
-                observacoes,
-                userId: user.uid
-            };
-
             try {
                 if (plantaoEditandoId) {
+                    // Modo edição - não permite recorrência
+                    const plantao = {
+                        data,
+                        horaInicio,
+                        tempoPlantao,
+                        local,
+                        valorHora: valorHoraFinal,
+                        valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                        valorTotal,
+                        observacoes,
+                        userId: user.uid
+                    };
+
                     await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
                     console.log("Plantão atualizado com sucesso!");
-                    plantaoEditandoId = null; // Limpa o modo edição
+                    plantaoEditandoId = null;
+                    
+                    exibirPopupSucesso("Plantão atualizado com sucesso!", 1);
                 } else {
-                    await db.collection("plantoes").add(plantao);
-                    console.log("Plantão cadastrado com sucesso!");
+                    // Modo criação - verifica recorrência
+                    if (recorrenteCheck) {
+                        const datas = calcularDatasRecorrencia();
+                        let plantoesCriados = 0;
+                        
+                        for (const dataPlantao of datas) {
+                            const dataFormatada = dataPlantao.toISOString().split('T')[0];
+                            
+                            // Recalcula valor por hora para cada data (fins de semana podem ter valores diferentes)
+                            const diaSemana = dataPlantao.getDay();
+                            let valorHoraData = valorHoraFinal;
+                            
+                            if (!valorCheioCheck) {
+                                if (local === 'Intermedica Diadema') {
+                                    valorHoraData = (diaSemana === 0 || diaSemana === 6) ? 125 : 114;
+                                } else if (local === 'Beneficência Portuguesa SC') {
+                                    valorHoraData = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
+                                } else if (local === 'Hospital Christóvão da Gama Diadema') {
+                                    valorHoraData = 125;
+                                }
+                            }
+                            
+                            const valorTotalData = valorCheioCheck && valorCheio ? Number(valorCheio) : (Number(valorHoraData) * Number(tempoPlantao));
+
+                            const plantao = {
+                                data: dataFormatada,
+                                horaInicio,
+                                tempoPlantao,
+                                local,
+                                valorHora: valorHoraData,
+                                valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                                valorTotal: valorTotalData,
+                                observacoes: observacoes + (observacoes ? ' ' : '') + '(Recorrente)',
+                                userId: user.uid
+                            };
+
+                            await db.collection("plantoes").add(plantao);
+                            plantoesCriados++;
+                        }
+                        
+                        console.log(`${plantoesCriados} plantões recorrentes cadastrados!`);
+                        exibirPopupSucesso(`${plantoesCriados} plantões recorrentes cadastrados com sucesso!`, plantoesCriados);
+                    } else {
+                        // Plantão único
+                        const plantao = {
+                            data,
+                            horaInicio,
+                            tempoPlantao,
+                            local,
+                            valorHora: valorHoraFinal,
+                            valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                            valorTotal,
+                            observacoes,
+                            userId: user.uid
+                        };
+
+                        await db.collection("plantoes").add(plantao);
+                        console.log("Plantão cadastrado com sucesso!");
+                        exibirPopupSucesso("Plantão cadastrado com sucesso!", 1);
+                    }
                 }
 
                 // Limpa os campos do formulário
                 this.reset();
                 document.getElementById('valorCheioGroup').style.display = 'none';
+                document.getElementById('recorrenciaGroup').style.display = 'none';
                 document.getElementById('valorHora').disabled = false;
+                const info = document.getElementById('recorrencia-info');
+                if (info) info.remove();
 
-                // Exibe o popup com as opções "Novo Plantão" ou "Cancelar"
-                const confirmacao = `
-                    <div style="text-align: center;">
-                        <p>Plantão cadastrado com sucesso!</p>
-                        <button onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
-                        <button onclick="fecharPopup(); mostrarSecao('inicio');">Cancelar</button>
-                    </div>
-                `;
-                const modal = document.createElement('div');
-                modal.style.position = 'fixed';
-                modal.style.top = '50%';
-                modal.style.left = '50%';
-                modal.style.transform = 'translate(-50%, -50%)';
-                modal.style.background = 'white';
-                modal.style.padding = '20px';
-                modal.style.borderRadius = '8px';
-                modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-                modal.style.zIndex = '9999'; // Garante que o modal fique acima de outros elementos
-                modal.innerHTML = confirmacao;
-
-                modal.id = 'popupModal'; // Adiciona um ID ao modal para facilitar a manipulação
-                document.body.appendChild(modal);
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
+                alert("Erro ao salvar plantão. Tente novamente.");
             }
         });
+
+        // Função para exibir popup de sucesso
+        function exibirPopupSucesso(mensagem, quantidade) {
+            const confirmacao = `
+                <div style="text-align: center;">
+                    <p>${mensagem}</p>
+                    ${quantidade > 1 ? `<p style="color: #666; font-size: 14px;">Você pode ver todos os plantões no calendário</p>` : ''}
+                    <button onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
+                    <button onclick="fecharPopup(); mostrarSecao('calendario');">Ver Calendário</button>
+                    <button onclick="fecharPopup(); mostrarSecao('inicio');">Início</button>
+                </div>
+            `;
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.top = '50%';
+            modal.style.left = '50%';
+            modal.style.transform = 'translate(-50%, -50%)';
+            modal.style.background = 'white';
+            modal.style.padding = '20px';
+            modal.style.borderRadius = '8px';
+            modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            modal.style.zIndex = '9999';
+            modal.innerHTML = confirmacao;
+            modal.id = 'popupModal';
+            document.body.appendChild(modal);
+        }
 
         // Atualize os botões de editar para passar a origem
         function abrirPopupResumo(plantaoId) {
@@ -1148,9 +1410,7 @@
             if (modal) {
                 document.body.removeChild(modal);
             }
-        }
-
-        // Mostrar/ocultar campo de valor cheio e calcular valorHora automaticamente
+        }        // Mostrar/ocultar campo de valor cheio e calcular valorHora automaticamente
 document.getElementById('valorCheioCheck').addEventListener('change', function() {
     const valorCheioGroup = document.getElementById('valorCheioGroup');
     const valorCheioInput = document.getElementById('valorCheio');
@@ -1167,6 +1427,95 @@ document.getElementById('valorCheioCheck').addEventListener('change', function()
         valorHoraInput.disabled = false;
     }
 });
+
+// Mostrar/ocultar campo de recorrência
+document.getElementById('recorrenteCheck').addEventListener('change', function() {
+    const recorrenciaGroup = document.getElementById('recorrenciaGroup');
+    recorrenciaGroup.style.display = this.checked ? 'block' : 'none';
+    
+    if (this.checked) {
+        // Adiciona informação sobre recorrência
+        if (!document.getElementById('recorrencia-info')) {
+            const info = document.createElement('div');
+            info.id = 'recorrencia-info';
+            info.className = 'recorrencia-info';
+            info.innerHTML = '<strong>📅 Plantão Recorrente:</strong> Serão criados múltiplos plantões baseados na configuração escolhida.';
+            recorrenciaGroup.appendChild(info);
+        }
+    } else {
+        const info = document.getElementById('recorrencia-info');
+        if (info) info.remove();
+    }
+});
+
+// Atualizar informações da recorrência quando mudar tipo ou quantidade
+document.getElementById('tipoRecorrencia').addEventListener('change', atualizarInfoRecorrencia);
+document.getElementById('quantidadeRecorrencia').addEventListener('input', atualizarInfoRecorrencia);
+document.getElementById('dataFim').addEventListener('change', atualizarInfoRecorrencia);
+
+// Validação da quantidade de recorrência
+document.getElementById('quantidadeRecorrencia').addEventListener('input', function() {
+    const valor = parseInt(this.value);
+    if (valor > 52) {
+        this.value = 52;
+        alert('Máximo de 52 repetições permitidas (1 ano)');
+    } else if (valor < 1) {
+        this.value = 1;
+    }
+});
+
+function atualizarInfoRecorrencia() {
+    const info = document.getElementById('recorrencia-info');
+    if (!info) return;
+    
+    const data = document.getElementById('data').value;
+    const tipo = document.getElementById('tipoRecorrencia').value;
+    const quantidade = document.getElementById('quantidadeRecorrencia').value;
+    const dataFim = document.getElementById('dataFim').value;
+    
+    if (!data) {
+        info.innerHTML = '<strong>📅 Plantão Recorrente:</strong> Selecione uma data primeiro.';
+        return;
+    }
+    
+    const dataInicial = new Date(data);
+    const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const posicoes = ['', '1ª', '2ª', '3ª', '4ª', '5ª'];
+    let texto = '<strong>📅 Plantão Recorrente:</strong> ';
+    
+    if (tipo === 'semanal') {
+        texto += `Toda ${diasSemana[dataInicial.getDay()]}`;
+    } else if (tipo === 'quinzenal') {
+        texto += `Toda ${diasSemana[dataInicial.getDay()]} (semana sim, semana não)`;
+    } else if (tipo === 'mensal') {
+        const posicao = obterPosicaoSemanaNoMes(dataInicial);
+        texto += `Toda ${posicoes[posicao]} ${diasSemana[dataInicial.getDay()]} do mês`;
+    }
+      const datasCalculadas = calcularDatasRecorrencia();
+    
+    if (dataFim) {
+        const dataLimite = new Date(dataFim);
+        texto += ` até ${dataLimite.toLocaleDateString('pt-BR')} (${datasCalculadas.length} plantões)`;
+    } else if (quantidade) {
+        if (datasCalculadas.length > 0) {
+            const ultimaData = datasCalculadas[datasCalculadas.length - 1];
+            texto += ` (${datasCalculadas.length} plantões até ${ultimaData.toLocaleDateString('pt-BR')})`;
+        }
+    }
+    
+    // Adiciona preview das próximas datas
+    if (datasCalculadas.length > 0) {
+        texto += '<br><small style="color: #888;">Próximas datas: ';
+        const proximasDatas = datasCalculadas.slice(0, 3).map(d => d.toLocaleDateString('pt-BR'));
+        texto += proximasDatas.join(', ');
+        if (datasCalculadas.length > 3) {
+            texto += `, ... (+${datasCalculadas.length - 3} mais)`;
+        }
+        texto += '</small>';
+    }
+    
+    info.innerHTML = texto;
+}
 
 // Sempre que o valor cheio ou tempo mudar, calcula o valorHora automaticamente se o checkbox estiver marcado
 document.getElementById('valorCheio').addEventListener('input', function() {
