@@ -669,10 +669,17 @@
                 </div>                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" id="valorCheioCheck" style="width:auto;">
                     <label for="valorCheioCheck" style="margin:0;">Informar valor cheio do plantão</label>
-                </div>
-                <div class="form-group" id="valorCheioGroup" style="display:none;">
+                </div>                <div class="form-group" id="valorCheioGroup" style="display:none;">
                     <label for="valorCheio">Valor Cheio do Plantão (R$):</label>
                     <input type="number" id="valorCheio" step="0.01">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="bonusCheck" style="width:auto;">
+                    <label for="bonusCheck" style="margin:0;">Informar bônus do dia</label>
+                </div>
+                <div class="form-group" id="bonusGroup" style="display:none;">
+                    <label for="valorBonus">Bônus do Dia (R$):</label>
+                    <input type="number" id="valorBonus" step="0.01" placeholder="Ex: 50.00">
                 </div>
                 <div class="form-group" style="display:flex; align-items:center; gap:8px;">
                     <input type="checkbox" id="recorrenteCheck" style="width:auto;">
@@ -1079,12 +1086,6 @@
             return `${dia}/${mes}/${ano}`;
         }
 
-        // Função auxiliar para criar data sem problemas de fuso horário
-        function criarDataSegura(dataString) {
-            const [ano, mes, dia] = dataString.split('-');
-            return new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
-        }
-
         // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
         function obterPosicaoSemanaNoMes(data) {
             const diaSemana = data.getDay();
@@ -1134,15 +1135,13 @@
                     if (contador === posicao) {
                         return data;
                     }
-                }        }
-        
-        return null; // Não encontrou a posição
-        }
-        
-        // Função para calcular datas de recorrência
+                }
+            }
+            
+            return null; // Não encontrou a posição
+        }// Função para calcular datas de recorrência
         function calcularDatasRecorrencia() {
-            const dataString = document.getElementById('data').value;
-            const dataInicial = criarDataSegura(dataString);
+            const dataInicial = new Date(document.getElementById('data').value);
             const tipo = document.getElementById('tipoRecorrencia').value;
             const quantidade = parseInt(document.getElementById('quantidadeRecorrencia').value) || 4;
             const dataFimInput = document.getElementById('dataFim').value;
@@ -1214,7 +1213,8 @@
                     
                     datas.push(new Date(dataCalculada));
                     plantoesCriados++;
-                      // Avança para o próximo mês
+                    
+                    // Avança para o próximo mês
                     mesAtual++;
                     if (mesAtual > 11) {
                         mesAtual = 0;
@@ -1224,9 +1224,7 @@
             }
             
             return datas;
-        }
-        
-        let plantaoEditandoId = null;
+        }let plantaoEditandoId = null;
         let origemEdicao = null; // Variável para armazenar a origem da edição
         
         async function editarPlantao(id, origem) {
@@ -1240,14 +1238,27 @@
             if (!plantao) {
                 alert("Plantão não encontrado!");
                 return;
-            }
-
-            document.getElementById('data').value = plantao.data;
+            }            document.getElementById('data').value = plantao.data;
             document.getElementById('horaInicio').value = plantao.horaInicio;
             document.getElementById('tempoPlantao').value = plantao.tempoPlantao;
             document.getElementById('local').value = plantao.local;
             document.getElementById('valorHora').value = plantao.valorHora;
             document.getElementById('observacoes').value = plantao.observacoes;
+
+            // Carrega valor cheio se existir
+            if (plantao.valorCheio) {
+                document.getElementById('valorCheioCheck').checked = true;
+                document.getElementById('valorCheio').value = plantao.valorCheio;
+                document.getElementById('valorCheioGroup').style.display = 'block';
+                document.getElementById('valorHora').disabled = true;
+            }
+
+            // Carrega bônus se existir
+            if (plantao.valorBonus) {
+                document.getElementById('bonusCheck').checked = true;
+                document.getElementById('valorBonus').value = plantao.valorBonus;
+                document.getElementById('bonusGroup').style.display = 'block';
+            }
 
             // Desabilita recorrência no modo edição
             document.getElementById('recorrenteCheck').checked = false;
@@ -1269,9 +1280,10 @@
             const horaInicio = document.getElementById('horaInicio').value;
             const tempoPlantao = document.getElementById('tempoPlantao').value;
             const local = document.getElementById('local').value;
-            const valorHora = document.getElementById('valorHora').value;
-            const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
+            const valorHora = document.getElementById('valorHora').value;            const valorCheioCheck = document.getElementById('valorCheioCheck').checked;
             const valorCheio = document.getElementById('valorCheio').value;
+            const bonusCheck = document.getElementById('bonusCheck').checked;
+            const valorBonus = document.getElementById('valorBonus').value;
             const observacoes = document.getElementById('observacoes').value;
             const recorrenteCheck = document.getElementById('recorrenteCheck').checked;
 
@@ -1283,16 +1295,16 @@
 
             let valorTotal;
             let valorHoraFinal = valorHora;
+            let bonusValor = bonusCheck && valorBonus ? Number(valorBonus) : 0;
 
             if (valorCheioCheck && valorCheio) {
-                valorTotal = Number(valorCheio);
+                valorTotal = Number(valorCheio) + bonusValor;
                 valorHoraFinal = (Number(valorCheio) / Number(tempoPlantao)).toFixed(2);
             } else {
-                valorTotal = Number(valorHora) * Number(tempoPlantao);
+                valorTotal = (Number(valorHora) * Number(tempoPlantao)) + bonusValor;
             }
 
-            try {
-                if (plantaoEditandoId) {
+            try {                if (plantaoEditandoId) {
                     // Modo edição - não permite recorrência
                     const plantao = {
                         data,
@@ -1301,6 +1313,7 @@
                         local,
                         valorHora: valorHoraFinal,
                         valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                        valorBonus: bonusCheck && valorBonus ? Number(valorBonus) : null,
                         valorTotal,
                         observacoes,
                         userId: user.uid
@@ -1333,8 +1346,8 @@
                                     valorHoraData = 125;
                                 }
                             }
-                            
-                            const valorTotalData = valorCheioCheck && valorCheio ? Number(valorCheio) : (Number(valorHoraData) * Number(tempoPlantao));
+                              let valorTotalData = valorCheioCheck && valorCheio ? Number(valorCheio) : (Number(valorHoraData) * Number(tempoPlantao));
+                            valorTotalData += bonusValor; // Adiciona o bônus ao valor total
 
                             const plantao = {
                                 data: dataFormatada,
@@ -1343,6 +1356,7 @@
                                 local,
                                 valorHora: valorHoraData,
                                 valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                                valorBonus: bonusCheck && valorBonus ? Number(valorBonus) : null,
                                 valorTotal: valorTotalData,
                                 observacoes: observacoes + (observacoes ? ' ' : '') + '(Recorrente)',
                                 userId: user.uid
@@ -1354,8 +1368,7 @@
                         
                         console.log(`${plantoesCriados} plantões recorrentes cadastrados!`);
                         exibirPopupSucesso(`${plantoesCriados} plantões recorrentes cadastrados com sucesso!`, plantoesCriados);
-                    } else {
-                        // Plantão único
+                    } else {                        // Plantão único
                         const plantao = {
                             data,
                             horaInicio,
@@ -1363,6 +1376,7 @@
                             local,
                             valorHora: valorHoraFinal,
                             valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                            valorBonus: bonusCheck && valorBonus ? Number(valorBonus) : null,
                             valorTotal,
                             observacoes,
                             userId: user.uid
@@ -1372,11 +1386,10 @@
                         console.log("Plantão cadastrado com sucesso!");
                         exibirPopupSucesso("Plantão cadastrado com sucesso!", 1);
                     }
-                }
-
-                // Limpa os campos do formulário
+                }                // Limpa os campos do formulário
                 this.reset();
                 document.getElementById('valorCheioGroup').style.display = 'none';
+                document.getElementById('bonusGroup').style.display = 'none';
                 document.getElementById('recorrenciaGroup').style.display = 'none';
                 document.getElementById('valorHora').disabled = false;
                 const info = document.getElementById('recorrencia-info');
@@ -1463,6 +1476,18 @@ document.getElementById('valorCheioCheck').addEventListener('change', function()
     }
 });
 
+// Mostrar/ocultar campo de bônus
+document.getElementById('bonusCheck').addEventListener('change', function() {
+    const bonusGroup = document.getElementById('bonusGroup');
+    const bonusInput = document.getElementById('valorBonus');
+    bonusGroup.style.display = this.checked ? 'block' : 'none';
+    bonusInput.required = this.checked;
+
+    if (!this.checked) {
+        bonusInput.value = '';
+    }
+});
+
 // Mostrar/ocultar campo de recorrência
 document.getElementById('recorrenteCheck').addEventListener('change', function() {
     const recorrenciaGroup = document.getElementById('recorrenciaGroup');
@@ -1507,12 +1532,13 @@ function atualizarInfoRecorrencia() {
     const tipo = document.getElementById('tipoRecorrencia').value;
     const quantidade = document.getElementById('quantidadeRecorrencia').value;
     const dataFim = document.getElementById('dataFim').value;
-      if (!data) {
+    
+    if (!data) {
         info.innerHTML = '<strong>📅 Plantão Recorrente:</strong> Selecione uma data primeiro.';
         return;
     }
     
-    const dataInicial = criarDataSegura(data);
+    const dataInicial = new Date(data);
     const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const posicoes = ['', '1ª', '2ª', '3ª', '4ª', '5ª'];
     let texto = '<strong>📅 Plantão Recorrente:</strong> ';
@@ -1525,8 +1551,9 @@ function atualizarInfoRecorrencia() {
         const posicao = obterPosicaoSemanaNoMes(dataInicial);
         texto += `Toda ${posicoes[posicao]} ${diasSemana[dataInicial.getDay()]} do mês`;
     }
-      const datasCalculadas = calcularDatasRecorrencia();      if (dataFim) {
-        const dataLimite = criarDataSegura(dataFim);
+      const datasCalculadas = calcularDatasRecorrencia();
+      if (dataFim) {
+        const dataLimite = new Date(dataFim);
         texto += ` até ${formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
     } else if (quantidade) {
         if (datasCalculadas.length > 0) {
@@ -1721,4 +1748,3 @@ async function excluirPlantao(plantaoId) {
     </script>
 </body>
 </html>
-``` 
