@@ -1079,6 +1079,12 @@
             return `${dia}/${mes}/${ano}`;
         }
 
+        // Função auxiliar para criar data sem problemas de fuso horário
+        function criarDataSegura(dataString) {
+            const [ano, mes, dia] = dataString.split('-');
+            return new Date(parseInt(ano), parseInt(mes) - 1, parseInt(dia));
+        }
+
         // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
         function obterPosicaoSemanaNoMes(data) {
             const diaSemana = data.getDay();
@@ -1128,13 +1134,15 @@
                     if (contador === posicao) {
                         return data;
                     }
-                }
-            }
-            
-            return null; // Não encontrou a posição
-        }// Função para calcular datas de recorrência
+                }        }
+        
+        return null; // Não encontrou a posição
+        }
+        
+        // Função para calcular datas de recorrência
         function calcularDatasRecorrencia() {
-            const dataInicial = new Date(document.getElementById('data').value);
+            const dataString = document.getElementById('data').value;
+            const dataInicial = criarDataSegura(dataString);
             const tipo = document.getElementById('tipoRecorrencia').value;
             const quantidade = parseInt(document.getElementById('quantidadeRecorrencia').value) || 4;
             const dataFimInput = document.getElementById('dataFim').value;
@@ -1206,8 +1214,7 @@
                     
                     datas.push(new Date(dataCalculada));
                     plantoesCriados++;
-                    
-                    // Avança para o próximo mês
+                      // Avança para o próximo mês
                     mesAtual++;
                     if (mesAtual > 11) {
                         mesAtual = 0;
@@ -1217,7 +1224,9 @@
             }
             
             return datas;
-        }let plantaoEditandoId = null;
+        }
+        
+        let plantaoEditandoId = null;
         let origemEdicao = null; // Variável para armazenar a origem da edição
         
         async function editarPlantao(id, origem) {
@@ -1498,13 +1507,12 @@ function atualizarInfoRecorrencia() {
     const tipo = document.getElementById('tipoRecorrencia').value;
     const quantidade = document.getElementById('quantidadeRecorrencia').value;
     const dataFim = document.getElementById('dataFim').value;
-    
-    if (!data) {
+      if (!data) {
         info.innerHTML = '<strong>📅 Plantão Recorrente:</strong> Selecione uma data primeiro.';
         return;
     }
     
-    const dataInicial = new Date(data);
+    const dataInicial = criarDataSegura(data);
     const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const posicoes = ['', '1ª', '2ª', '3ª', '4ª', '5ª'];
     let texto = '<strong>📅 Plantão Recorrente:</strong> ';
@@ -1517,9 +1525,8 @@ function atualizarInfoRecorrencia() {
         const posicao = obterPosicaoSemanaNoMes(dataInicial);
         texto += `Toda ${posicoes[posicao]} ${diasSemana[dataInicial.getDay()]} do mês`;
     }
-      const datasCalculadas = calcularDatasRecorrencia();
-      if (dataFim) {
-        const dataLimite = new Date(dataFim);
+      const datasCalculadas = calcularDatasRecorrencia();      if (dataFim) {
+        const dataLimite = criarDataSegura(dataFim);
         texto += ` até ${formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
     } else if (quantidade) {
         if (datasCalculadas.length > 0) {
@@ -1714,3 +1721,4 @@ async function excluirPlantao(plantaoId) {
     </script>
 </body>
 </html>
+``` 
