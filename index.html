@@ -115,6 +115,18 @@
             overflow: visible;
             z-index: 1;
         }
+        /* Destaque da data de hoje no calendário */
+        #calendar .fc-today {
+            background: linear-gradient(180deg, #fff0f6 0%, #ffe6f1 100%);
+            border: 1px solid #ff4d94;
+            box-shadow: inset 0 0 0 1px rgba(255, 77, 148, 0.25);
+        }
+        #calendar .fc-today .fc-day-number,
+        #calendar .fc-agenda-view .fc-today .fc-day-number,
+        #calendar .fc-agenda-view .fc-today .fc-day-header {
+            color: #c2185b;
+            font-weight: 700;
+        }
         .tab-content {
             overflow: auto;
         }
