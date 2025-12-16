@@ -673,6 +673,7 @@
                         <option value="Intermedica Diadema">Intermedica Diadema</option>
                         <option value="Beneficência Portuguesa SC">Beneficência Portuguesa SC</option>
                         <option value="Hospital Christóvão da Gama Diadema">Hospital Christóvão da Gama Diadema</option>
+                        <option value="Hospital São Cristovão (Mooca)">Hospital São Cristovão (Mooca)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1082,6 +1083,8 @@
                 valor = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
             } else if (local === 'Hospital Christóvão da Gama Diadema') {
                 valor = 125; // Valor fixo de R$ 125,00 para todos os dias
+            } else if (local === 'Hospital São Cristovão (Mooca)') {
+                valor = 125; // Valor fixo de R$ 125,00 para todos os dias
             }            valorHoraInput.value = valor;
         }
         
@@ -1355,6 +1358,8 @@
                                 } else if (local === 'Beneficência Portuguesa SC') {
                                     valorHoraData = (diaSemana === 0 || diaSemana === 6) ? 135 : 125;
                                 } else if (local === 'Hospital Christóvão da Gama Diadema') {
+                                    valorHoraData = 125;
+                                } else if (local === 'Hospital São Cristovão (Mooca)') {
                                     valorHoraData = 125;
                                 }
                             }
