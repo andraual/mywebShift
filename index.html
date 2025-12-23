@@ -760,6 +760,7 @@
                         <option value="2023">2023</option>
                         <option value="2024" selected>2024</option>
                         <option value="2025">2025</option>
+                        <option value="2026">2026</option>
                     </select>
                 </div>
                 <button onclick="filtrarResumo()">Filtrar</button>
@@ -798,6 +799,7 @@
             }
             // Atualiza o resumo ao entrar na tela
             if (secao === 'resumo') {
+                verificarAnosDisponiveis(); // Verifica e adiciona novos anos
                 setResumoDefaults(); // <-- define mês/ano atual antes de filtrar
                 filtrarResumo();
             }            if (secao === 'inicio') {
@@ -1062,7 +1064,50 @@
             }
         });
 
-        // Função para definir o valor por hora automaticamente
+        // Função para adicionar anos dinamicamente ao select
+        function adicionarAnoAoResumo(ano) {
+            const anoSelect = document.getElementById('anoResumo');
+            const anoString = String(ano);
+            const exists = Array.from(anoSelect.options).some(opt => opt.value === anoString);
+            
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = anoString;
+                opt.text = anoString;
+                anoSelect.appendChild(opt);
+                // Ordena as opções numericamente
+                const opcoes = Array.from(anoSelect.options);
+                opcoes.sort((a, b) => Number(a.value) - Number(b.value));
+                anoSelect.innerHTML = '';
+                opcoes.forEach(opt => anoSelect.appendChild(opt));
+            }
+        }
+        
+        // Função para verificar e adicionar anos dos plantões existentes
+        async function verificarAnosDisponiveis() {
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+            
+            try {
+                const snapshot = await db.collection("plantoes").where("userId", "==", user.uid).get();
+                const anos = new Set();
+                
+                snapshot.forEach(doc => {
+                    const p = doc.data();
+                    if (p.data) {
+                        const ano = Number(p.data.split('-')[0]);
+                        anos.add(ano);
+                    }
+                });
+                
+                // Adiciona cada ano encontrado
+                anos.forEach(ano => adicionarAnoAoResumo(ano));
+            } catch (error) {
+                console.error("Erro ao verificar anos disponíveis:", error);
+            }
+        }
+        
+        // Função auxiliar para verificar e atualizar anos
         function atualizarValorHora() {
             const data = document.getElementById('data').value;
             const local = document.getElementById('local').value;
@@ -1385,7 +1430,12 @@
                         
                         console.log(`${plantoesCriados} plantões recorrentes cadastrados!`);
                         exibirPopupSucesso(`${plantoesCriados} plantões recorrentes cadastrados com sucesso!`, plantoesCriados);
-                    } else {                        // Plantão único
+                        
+                        // Adiciona ano do plantão ao resumo financeiro
+                        const anoPlantao = Number(data.split('-')[0]);
+                        adicionarAnoAoResumo(anoPlantao);
+                    } else {
+                        // Plantão único
                         const plantao = {
                             data,
                             horaInicio,
@@ -1402,6 +1452,10 @@
                         await db.collection("plantoes").add(plantao);
                         console.log("Plantão cadastrado com sucesso!");
                         exibirPopupSucesso("Plantão cadastrado com sucesso!", 1);
+                        
+                        // Adiciona ano do plantão ao resumo financeiro
+                        const anoPlantao = Number(data.split('-')[0]);
+                        adicionarAnoAoResumo(anoPlantao);
                     }
                 }                // Limpa os campos do formulário
                 this.reset();
