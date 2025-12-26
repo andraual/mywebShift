@@ -1064,6 +1064,85 @@
     body.dark-theme .theme-selector input[type="radio"]:checked + label {
         color: #ff7bb3;
     }
+
+    /* Tabelas em Tema Escuro */
+    body.dark-theme .summary-item table {
+        background-color: #2a2a2a;
+        color: #e0e0e0;
+    }
+
+    body.dark-theme .summary-item th,
+    body.dark-theme .summary-item td {
+        border-bottom-color: #3a3a3a;
+        color: #e0e0e0;
+    }
+
+    body.dark-theme .summary-item thead th {
+        background: rgba(255, 77, 148, 0.15);
+        color: #e0e0e0;
+        font-weight: 600;
+    }
+
+    body.dark-theme .summary-item tbody tr:hover {
+        background-color: rgba(255, 77, 148, 0.1);
+    }
+
+    body.dark-theme .summary-item tbody tr {
+        background-color: #2a2a2a;
+    }
+
+    body.dark-theme .summary-item tbody tr:nth-child(even) {
+        background-color: #252525;
+    }
+
+    /* Links nas tabelas */
+    body.dark-theme .summary-item a {
+        color: #ff7bb3;
+        text-decoration: none;
+    }
+
+    body.dark-theme .summary-item a:hover {
+        text-decoration: underline;
+        color: #ff9cc9;
+    }
+
+    /* Botões dentro das tabelas */
+    body.dark-theme .summary-item button {
+        background: linear-gradient(90deg, #cc6299 0%, #cc4080 100%);
+        color: white;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    body.dark-theme .summary-item button:hover {
+        opacity: 0.9;
+    }
+
+    /* Inputs em tabelas */
+    body.dark-theme .summary-item input {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border-color: #3a3a3a;
+    }
+
+    body.dark-theme .summary-item input:focus {
+        border-color: #ff7bb3;
+        background-color: #1e1e1e;
+    }
+
+    /* Total row styling em tema escuro */
+    body.dark-theme .summary-item tfoot tr {
+        background-color: rgba(255, 77, 148, 0.1);
+        font-weight: 600;
+        border-top: 2px solid #ff7bb3;
+    }
+
+    body.dark-theme .summary-item tfoot td {
+        color: #ff7bb3;
+    }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
 </head>
