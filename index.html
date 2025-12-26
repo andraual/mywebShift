@@ -827,6 +827,11 @@
         firebase.analytics();
         const db = firebase.firestore();
         const auth = firebase.auth();
+        
+        console.log('Firebase inicializado:', {
+            projectId: firebaseConfig.projectId,
+            authDomain: firebaseConfig.authDomain
+        });
 
         // Controle de exibição: só mostra o app se estiver logado
         function mostrarAppLogado(logado) {
@@ -1089,11 +1094,29 @@
             const senha = document.getElementById('loginSenha').value;
             const erroDiv = document.getElementById('loginErro');
             erroDiv.textContent = '';
+            
             try {
+                console.log('Tentando login com:', email);
                 await auth.signInWithEmailAndPassword(email, senha);
+                console.log('Login bem-sucedido!');
                 // O onAuthStateChanged já cuida da navegação
             } catch (error) {
-                erroDiv.textContent = 'E-mail ou senha inválidos.';
+                console.error('Erro de login:', error.code, error.message);
+                
+                // Mensagens de erro mais específicas
+                let mensagem = 'E-mail ou senha inválidos.';
+                if (error.code === 'auth/user-not-found') {
+                    mensagem = 'Usuário não encontrado.';
+                } else if (error.code === 'auth/wrong-password') {
+                    mensagem = 'Senha incorreta.';
+                } else if (error.code === 'auth/invalid-email') {
+                    mensagem = 'E-mail inválido.';
+                } else if (error.code === 'auth/user-disabled') {
+                    mensagem = 'Usuário desabilitado.';
+                }
+                
+                erroDiv.textContent = mensagem;
+                console.log('Mensagem exibida:', mensagem);
             }
         });
 
