@@ -182,9 +182,10 @@
             cursor:pointer;
             transition: transform .14s ease, box-shadow .14s ease, opacity .14s;
             text-decoration: none;
+            font-size: 16px;
         }
-        .main-btn svg { filter: drop-shadow(0 6px 18px rgba(255,77,148,0.12)); }
-        .main-btn span { margin-top:10px; font-weight:600; font-size:15px; }
+        .main-btn svg { filter: drop-shadow(0 6px 18px rgba(255,77,148,0.12)); width: 48px; height: 48px; }
+        .main-btn span { margin-top:10px; font-weight:600; font-size:16px; }
 
         /* hover / active */
         .main-btn:hover { transform: translateY(-4px); box-shadow: 0 22px 40px rgba(255,77,148,0.14); }
@@ -199,11 +200,28 @@
             border-radius:10px;
         }        /* Responsividade para telas menores */
         @media (max-width: 768px) {
+            body {
+                font-size: 16px; /* Aumenta tamanho base da fonte */
+            }
+            h1, h2, h3 {
+                font-size: 20px;
+            }
             .container {
-                padding: 10px;
+                padding: 15px;
             }
             form {
                 grid-template-columns: 1fr; /* Ajusta para uma única coluna */
+            }
+            label {
+                font-size: 16px;
+            }
+            input, select, textarea {
+                font-size: 16px; /* Evita zoom em iOS */
+                padding: 12px;
+            }
+            button {
+                font-size: 16px;
+                padding: 12px 16px;
             }
             .summary-header {
                 grid-template-columns: 1fr;
@@ -211,7 +229,22 @@
             }
             .main-btns {
                 flex-direction: column;
-                gap: 20px;
+                gap: 16px;
+                width: 100%;
+            }
+            .main-btn {
+                min-width: 100%;
+                min-height: 120px;
+                padding: 20px 16px;
+                font-size: 18px;
+            }
+            .main-btn svg {
+                width: 56px;
+                height: 56px;
+            }
+            .main-btn span {
+                font-size: 18px;
+                margin-top: 12px;
             }
             #calendar {
                 /* Remove altura fixa e permite expansão automática */
@@ -223,17 +256,48 @@
 
         /* alterado: breakpoint de 480px -> 390px */
         @media (max-width: 390px) {
+            body {
+                font-size: 15px;
+            }
             h1 {
-                font-size: 20px; /* Reduz o tamanho do título */
+                font-size: 22px; /* Reduz o tamanho do título */
+            }
+            h2, h3 {
+                font-size: 18px;
             }
             button {
-                font-size: 14px; /* Ajusta o tamanho do botão */
-                padding: 8px 10px; /* Ajusta o espaçamento do botão */
+                font-size: 15px; /* Ajusta o tamanho do botão */
+                padding: 12px 14px; /* Ajusta o espaçamento do botão */
+            }
+            input, select, textarea {
+                font-size: 15px;
+                padding: 11px;
             }
             .main-btns button {
-                font-size: 15px;
-                padding: 12px 10px;
+                font-size: 16px;
+                padding: 18px 12px;
             }
+            .main-btn {
+                min-height: 110px;
+                min-width: 95%;
+                padding: 18px 12px;
+                font-size: 16px;
+            }
+            .main-btn svg {
+                width: 44px;
+                height: 44px;
+            }
+            .main-btn span {
+                font-size: 16px;
+                margin-top: 10px;
+            }
+            #calendar {
+                /* Permite altura automática em dispositivos móveis */
+                height: auto !important;
+                min-height: 350px;
+                overflow: visible !important;
+            }
+            .summary-item table { min-width: 360px; font-size: 11px; }
         }
 
         /* Estilos para a tela de login */
