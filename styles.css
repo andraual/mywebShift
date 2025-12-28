@@ -651,10 +651,11 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background-image: url('bg_app.jpg');
+        background-image: url('./bg_app.jpg');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
+        background-color: #fbeaf3; /* fallback para caso a imagem não carregue */
         padding: 20px;
         position: relative;
     }
@@ -666,7 +667,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255, 255, 255, 0.85);
+        background: rgba(255, 255, 255, 0.65); /* deixa a imagem aparecer mais no desktop */
         z-index: 0;
     }
 
