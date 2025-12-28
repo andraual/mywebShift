@@ -1,17 +1,8 @@
             (function() {
-        console.log('app.js: window.Utils =', window.Utils);
-        console.log('app.js: window.CONFIG =', window.CONFIG);
+        console.log('app.js loaded. window.Utils:', !!window.Utils, 'window.CONFIG:', !!window.CONFIG);
         
-        if (!window.Utils) {
-            console.error('Utils não carregado. Verifique se src/utils.js foi incluído antes de app.js.');
-            throw new Error('Utils não carregado. Verifique se src/utils.js foi incluído antes de app.js.');
-        }
-        if (!window.CONFIG) {
-            console.error('CONFIG não carregado. Verifique se src/config.js foi incluído antes de app.js.');
-            throw new Error('CONFIG não carregado. Verifique se src/config.js foi incluído antes de app.js.');
-        }
-        
-        const { debounce, obterDiaSemana, obterValorPorLocal, formatarDataBR, obterPosicaoSemanaNoMes, obterDataPorPosicaoSemana } = window.Utils;
+        // Instead of destructuring, use window.Utils directly to avoid scope issues
+        // This way, the functions are always accessed from the global namespace
 
         // Função para navegação entre seções
         function mostrarSecao(secao) {
@@ -263,7 +254,7 @@
                 $('#calendar').fullCalendar('removeEvents');
                 $('#calendar').fullCalendar('addEventSource', eventos);
             };            // Ajusta altura do calendário ao redimensionar a janela com debounce
-            $(window).on('resize', debounce(function() {
+            $(window).on('resize', window.Utils.debounce(function() {
                 const isMobile = window.innerWidth <= 768;
                 try {
                     if (isMobile) {
@@ -627,8 +618,8 @@
                 return;
             }
 
-            const diaSemana = obterDiaSemana(data);
-            const valor = obterValorPorLocal(local, diaSemana);
+            const diaSemana = window.Utils.obterDiaSemana(data);
+            const valor = window.Utils.obterValorPorLocal(local, diaSemana);
             
             if (valor !== null) {
                 valorHoraInput.value = valor;
@@ -687,7 +678,7 @@
                 }
                   } else if (tipo === 'mensal') {
                 // Mensal: mesma posição da semana no mês (ex: toda 3ª quarta-feira)
-                const posicaoSemana = obterPosicaoSemanaNoMes(dataInicial);
+                const posicaoSemana = window.Utils.obterPosicaoSemanaNoMes(dataInicial);
                 let mesAtual = dataInicial.getMonth();
                 let anoAtual = dataInicial.getFullYear();
                 let plantoesCriados = 0;
@@ -707,7 +698,7 @@
                 
                 // Continua criando os plantões restantes
                 while (plantoesCriados < quantidade) {
-                    const dataCalculada = obterDataPorPosicaoSemana(anoAtual, mesAtual, diaSemana, posicaoSemana);
+                    const dataCalculada = window.Utils.obterDataPorPosicaoSemana(anoAtual, mesAtual, diaSemana, posicaoSemana);
                     
                     if (!dataCalculada) {
                         // Se não existe esta posição no mês (ex: 5ª segunda), pula para o próximo mês
@@ -861,8 +852,8 @@
                             let valorHoraData = valorHoraFinal;
                             
                             if (!valorCheioCheck) {
-                                const diaSemana = obterDiaSemana(dataString);
-                                const valor = obterValorPorLocal(local, diaSemana);
+                                const diaSemana = window.Utils.obterDiaSemana(dataString);
+                                const valor = window.Utils.obterValorPorLocal(local, diaSemana);
                                 if (valor !== null) {
                                     valorHoraData = valor;
                                 }
@@ -1079,23 +1070,23 @@ function atualizarInfoRecorrencia() {
     } else if (tipo === 'quinzenal') {
         texto += `Toda ${diasSemana[dataInicial.getDay()]} (semana sim, semana não)`;
     } else if (tipo === 'mensal') {
-        const posicao = obterPosicaoSemanaNoMes(dataInicial);
+        const posicao = window.Utils.obterPosicaoSemanaNoMes(dataInicial);
         texto += `Toda ${posicoes[posicao]} ${diasSemana[dataInicial.getDay()]} do mês`;
     }
       const datasCalculadas = calcularDatasRecorrencia();
       if (dataFim) {
         const dataLimite = new Date(dataFim);
-        texto += ` até ${formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
+        texto += ` até ${window.Utils.formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
     } else if (quantidade) {
         if (datasCalculadas.length > 0) {
             const ultimaData = datasCalculadas[datasCalculadas.length - 1];
-            texto += ` (${datasCalculadas.length} plantões até ${formatarDataBR(ultimaData)})`;
+            texto += ` (${datasCalculadas.length} plantões até ${window.Utils.formatarDataBR(ultimaData)})`;
         }
     }
       // Adiciona preview das próximas datas
     if (datasCalculadas.length > 0) {
         texto += '<br><small style="color: #888;">Próximas datas: ';
-        const proximasDatas = datasCalculadas.slice(0, 3).map(d => formatarDataBR(d));
+        const proximasDatas = datasCalculadas.slice(0, 3).map(d => window.Utils.formatarDataBR(d));
         texto += proximasDatas.join(', ');
         if (datasCalculadas.length > 3) {
             texto += `, ... (+${datasCalculadas.length - 3} mais)`;
