@@ -580,9 +580,9 @@
   /* centraliza e define largura mínima razoável para Horas */
   .summary-item th:nth-child(2),
   .summary-item td:nth-child(2) {
-    width: 40px !important;
-    max-width: 40px !important;
-    text-align: center !important;
+        width: auto !important;
+        min-width: 64px;
+        text-align: center !important;
   }
 
   /* remove quaisquer larguras inválidas definidas anteriormente */
@@ -593,6 +593,10 @@
       width: 52px !important;
       max-width: 52px !important;
     }
+        .summary-item th:nth-child(2),
+        .summary-item td:nth-child(2) {
+            min-width: 56px;
+        }
   }
 
   /* --- Ajuste para desktop: tabela fixa e colunas proporcionais --- */
