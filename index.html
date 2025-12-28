@@ -736,11 +736,13 @@
 
     .login-form input {
         width: 100%;
+        max-width: 100%;
         padding: 12px;
         border: 1px solid #ddd;
         border-radius: 8px;
         font-size: 16px;
         transition: border-color 0.2s;
+        box-sizing: border-box;
     }
 
     .login-form input:focus {
@@ -1213,13 +1215,6 @@
     <!-- Modal para Criar Conta -->
     <div id="criarContaModal" class="login-container" style="display: none;">
         <div class="login-card">
-            <!-- Logo -->
-            <div class="login-logo">
-                <div style="font-family: 'Georgia', 'Times New Roman', serif; font-size: 48px; font-weight: 400; color: #ff4d94; letter-spacing: -2px; font-style: italic;">
-                    <span style="text-transform: uppercase;">My</span><span style="text-transform: lowercase; font-size: 42px;">Shift</span>
-                </div>
-            </div>
-
             <!-- Títulos -->
             <h2>Criar Conta</h2>
             <p>Faça seu cadastro e comece a controlar seus plantões</p>
@@ -1263,13 +1258,6 @@
     <!-- Tela de Login (fora da .container) -->
     <div id="login" class="login-container">
         <div class="login-card">
-            <!-- Logo -->
-            <div class="login-logo">
-                <div style="font-family: 'Georgia', 'Times New Roman', serif; font-size: 48px; font-weight: 400; color: #ff4d94; letter-spacing: -2px; font-style: italic;">
-                    <span style="text-transform: uppercase;">My</span><span style="text-transform: lowercase; font-size: 42px;">shift</span>
-                </div>
-            </div>
-
             <!-- Títulos -->
             <h2>Bem-vindo!</h2>
             <p>Controle seus plantões médicos com facilidade</p>
