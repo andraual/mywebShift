@@ -21,6 +21,7 @@
         <link rel="stylesheet" href="styles.css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <!-- Modal para Criar Conta -->
@@ -283,6 +284,7 @@
                     </select>
                 </div>
                 <button onclick="filtrarResumo()">Filtrar</button>
+                <button onclick="mostrarSecao('consolidado')" style="background: #4CAF50; margin-left: auto;">📊 Consolidado</button>
             </div>
             <div id="resumoContent">
                 <!-- Aqui será carregado o resumo financeiro -->
@@ -293,6 +295,111 @@
                 <h3 style="font-size: 24px; font-weight: 700; color: #ff4d94;">Resumo Total</h3>
                 <p style="font-size: 18px; margin: 10px 0;"><strong>Total de Horas:</strong> <span id="totalHoras">0</span></p>
                 <p style="font-size: 18px; margin: 10px 0;"><strong>Valor Total:</strong> R$ <span id="totalValor">0,00</span></p>
+            </div>
+        </div>
+
+        <!-- Seção de Consolidado Anual -->
+        <div id="consolidado" style="display:none;">
+            <button onclick="mostrarSecao('resumo')" style="margin-bottom:20px;">&larr; Voltar</button>
+            <h2>Consolidado Anual</h2>
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 150px;">
+                    <label for="anoConsolidado">Ano:</label>
+                    <select id="anoConsolidado">
+                        <option value="2023">2023</option>
+                        <option value="2024" selected>2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                </div>
+                <button onclick="carregarConsolidado()">Carregar</button>
+            </div>
+
+            <!-- Resumo Total do Ano -->
+            <div style="margin-bottom: 30px; padding: 20px; background: #f0f8ff; border-radius: 10px; border-left: 4px solid #4CAF50;">
+                <h3 style="margin-top: 0; color: #333;">Resumo Anual</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div>
+                        <p style="margin: 5px 0; font-size: 14px; color: #666;">Total de Horas</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: 700; color: #333;"><span id="consolidadoTotalHoras">0</span> h</p>
+                    </div>
+                    <div>
+                        <p style="margin: 5px 0; font-size: 14px; color: #666;">Valor Total</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: 700; color: #4CAF50;">R$ <span id="consolidadoTotalValor">0,00</span></p>
+                    </div>
+                    <div>
+                        <p style="margin: 5px 0; font-size: 14px; color: #666;">Valor Médio/Hora</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: 700; color: #2196F3;">R$ <span id="consolidadoMediaHora">0,00</span></p>
+                    </div>
+                    <div>
+                        <p style="margin: 5px 0; font-size: 14px; color: #666;">Plantões Realizados</p>
+                        <p style="margin: 0; font-size: 24px; font-weight: 700; color: #FF9800;"><span id="consolidadoPlantoes">0</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráfico de Evolução Mensal -->
+            <div style="margin-bottom: 40px;">
+                <h3>Evolução de Ganhos (Mensal)</h3>
+                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <canvas id="chartEvolucao" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráficos de Distribuição por Unidade -->
+            <div style="margin-bottom: 40px;">
+                <h3>Distribuição de Ganhos por Unidade</h3>
+                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <div>
+                        <p style="font-size: 14px; font-weight: 600; margin-bottom: 10px; text-align: center;">Valor por Unidade</p>
+                        <canvas id="chartUnidades" style="max-height: 300px;"></canvas>
+                    </div>
+                    <div>
+                        <p style="font-size: 14px; font-weight: 600; margin-bottom: 10px; text-align: center;">Horas por Unidade</p>
+                        <canvas id="chartHoras" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de Detalhes por Unidade -->
+            <div style="margin-bottom: 40px;">
+                <h3>Detalhes por Unidade</h3>
+                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                <th style="padding: 12px; text-align: left; font-weight: 600;">Unidade</th>
+                                <th style="padding: 12px; text-align: center; font-weight: 600;">Plantões</th>
+                                <th style="padding: 12px; text-align: center; font-weight: 600;">Horas</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600;">Valor Total</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600;">Valor/Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="consolidadoTabelaCorpo">
+                            <tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabela de Evolução Mensal -->
+            <div style="margin-bottom: 40px;">
+                <h3>Evolução Mensal</h3>
+                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                                <th style="padding: 12px; text-align: left; font-weight: 600;">Mês</th>
+                                <th style="padding: 12px; text-align: center; font-weight: 600;">Plantões</th>
+                                <th style="padding: 12px; text-align: center; font-weight: 600;">Horas</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600;">Valor Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="consolidadoTabelaMeses">
+                            <tr><td colspan="4" style="padding: 20px; text-align: center; color: #999;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

@@ -10,6 +10,7 @@
             document.getElementById('cadastro').style.display = (secao === 'cadastro') ? 'block' : 'none';
             document.getElementById('calendario').style.display = (secao === 'calendario') ? 'block' : 'none';
             document.getElementById('resumo').style.display = (secao === 'resumo') ? 'block' : 'none';
+            document.getElementById('consolidado').style.display = (secao === 'consolidado') ? 'block' : 'none';
             // Atualiza o calendário ao entrar na tela
             if (secao === 'calendario' && window.atualizarCalendario) {
                 window.atualizarCalendario();
@@ -18,6 +19,12 @@
             if (secao === 'resumo') {
                 verificarAnosDisponiveis(); // Verifica e adiciona novos anos
                 setResumoDefaults(); // <-- define mês/ano atual antes de filtrar
+                filtrarResumo();
+            }
+            // Carrega consolidado ao entrar na tela
+            if (secao === 'consolidado') {
+                carregarConsolidado();
+            }
                 filtrarResumo();
             }            if (secao === 'inicio') {
                 plantaoEditandoId = null;
@@ -1216,6 +1223,226 @@ async function excluirPlantao(plantaoId) {
     } catch (error) {
         console.error("Erro ao excluir plantão:", error);
     }
+}
+
+/* --- Função para Carregar Consolidado Anual --- */
+async function carregarConsolidado() {
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            alert('Você precisa estar logado.');
+            return;
+        }
+
+        const anoSelect = document.getElementById('anoConsolidado');
+        const ano = anoSelect ? anoSelect.value : new Date().getFullYear().toString();
+        
+        const snapshot = await db.collection("plantoes").where("userId", "==", user.uid).get();
+        const plantoes = [];
+        const meses = {};
+        const unidades = {};
+        
+        // Processar plantões do ano selecionado
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            if (p.data && p.data.startsWith(ano)) {
+                plantoes.push(p);
+                
+                const mesStr = p.data.substring(5, 7);
+                const mes = parseInt(mesStr);
+                const local = p.local || 'Sem local';
+                const horas = Number(p.tempoPlantao) || 0;
+                const valorTotal = p.valorTotal !== undefined ? Number(p.valorTotal) : 0;
+                
+                // Agregação por mês
+                if (!meses[mes]) {
+                    meses[mes] = { plantoes: 0, horas: 0, valor: 0 };
+                }
+                meses[mes].plantoes++;
+                meses[mes].horas += horas;
+                meses[mes].valor += valorTotal;
+                
+                // Agregação por unidade
+                if (!unidades[local]) {
+                    unidades[local] = { plantoes: 0, horas: 0, valor: 0 };
+                }
+                unidades[local].plantoes++;
+                unidades[local].horas += horas;
+                unidades[local].valor += valorTotal;
+            }
+        });
+        
+        // Calcular totais
+        let totalHoras = 0, totalValor = 0, totalPlantoes = 0;
+        Object.values(meses).forEach(m => {
+            totalHoras += m.horas;
+            totalValor += m.valor;
+            totalPlantoes += m.plantoes;
+        });
+        
+        const mediaHora = totalHoras > 0 ? (totalValor / totalHoras).toFixed(2) : '0.00';
+        
+        // Atualizar resumo total
+        document.getElementById('consolidadoTotalHoras').textContent = totalHoras.toFixed(1);
+        document.getElementById('consolidadoTotalValor').textContent = totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        document.getElementById('consolidadoMediaHora').textContent = mediaHora;
+        document.getElementById('consolidadoPlantoes').textContent = totalPlantoes;
+        
+        // Renderizar tabela de unidades
+        renderizarTabelaUnidades(unidades);
+        
+        // Renderizar tabela de meses
+        renderizarTabelaMeses(meses);
+        
+        // Renderizar gráficos
+        renderizarGraficos(meses, unidades);
+        
+    } catch (erro) {
+        console.error('Erro ao carregar consolidado:', erro);
+        alert('Erro ao carregar consolidado.');
+    }
+}
+
+function renderizarTabelaUnidades(unidades) {
+    const tbody = document.getElementById('consolidadoTabelaCorpo');
+    let html = '';
+    
+    Object.keys(unidades).sort().forEach(unidade => {
+        const u = unidades[unidade];
+        const mediaHora = u.horas > 0 ? (u.valor / u.horas).toFixed(2) : '0.00';
+        html += `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 12px; text-align: left;">${unidade}</td>
+                <td style="padding: 12px; text-align: center;">${u.plantoes}</td>
+                <td style="padding: 12px; text-align: center;">${u.horas.toFixed(1)}</td>
+                <td style="padding: 12px; text-align: right;">R$ ${u.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style="padding: 12px; text-align: right;">R$ ${mediaHora}</td>
+            </tr>
+        `;
+    });
+    
+    if (html === '') {
+        html = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">Nenhum dado</td></tr>';
+    }
+    
+    tbody.innerHTML = html;
+}
+
+function renderizarTabelaMeses(meses) {
+    const tbody = document.getElementById('consolidadoTabelaMeses');
+    const mesesNomes = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    let html = '';
+    
+    for (let mes = 1; mes <= 12; mes++) {
+        if (meses[mes]) {
+            const m = meses[mes];
+            html += `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px; text-align: left;">${mesesNomes[mes]}</td>
+                    <td style="padding: 12px; text-align: center;">${m.plantoes}</td>
+                    <td style="padding: 12px; text-align: center;">${m.horas.toFixed(1)}</td>
+                    <td style="padding: 12px; text-align: right;">R$ ${m.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            `;
+        }
+    }
+    
+    if (html === '') {
+        html = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #999;">Nenhum dado</td></tr>';
+    }
+    
+    tbody.innerHTML = html;
+}
+
+function renderizarGraficos(meses, unidades) {
+    // Gráfico de evolução mensal
+    const mesesLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const mesesData = [];
+    for (let i = 1; i <= 12; i++) {
+        mesesData.push(meses[i] ? meses[i].valor : 0);
+    }
+    
+    const ctxEvolucao = document.getElementById('chartEvolucao');
+    if (window.chartEvolucaoInstance) {
+        window.chartEvolucaoInstance.destroy();
+    }
+    window.chartEvolucaoInstance = new Chart(ctxEvolucao, {
+        type: 'line',
+        data: {
+            labels: mesesLabels,
+            datasets: [{
+                label: 'Valor Mensal (R$)',
+                data: mesesData,
+                borderColor: '#4CAF50',
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: true }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+    
+    // Gráfico de unidades (pie chart - valor)
+    const unidadesLabels = Object.keys(unidades).sort();
+    const unidadesData = unidadesLabels.map(u => unidades[u].valor);
+    
+    const ctxUnidades = document.getElementById('chartUnidades');
+    if (window.chartUnidadesInstance) {
+        window.chartUnidadesInstance.destroy();
+    }
+    window.chartUnidadesInstance = new Chart(ctxUnidades, {
+        type: 'doughnut',
+        data: {
+            labels: unidadesLabels,
+            datasets: [{
+                data: unidadesData,
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+    
+    // Gráfico de horas por unidade (bar chart)
+    const horasData = unidadesLabels.map(u => unidades[u].horas);
+    
+    const ctxHoras = document.getElementById('chartHoras');
+    if (window.chartHorasInstance) {
+        window.chartHorasInstance.destroy();
+    }
+    window.chartHorasInstance = new Chart(ctxHoras, {
+        type: 'bar',
+        data: {
+            labels: unidadesLabels,
+            datasets: [{
+                label: 'Horas Trabalhadas',
+                data: horasData,
+                backgroundColor: '#2196F3'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
 }
     
 
