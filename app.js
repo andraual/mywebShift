@@ -31,7 +31,32 @@
         // Inicialização do Firebase usando a API compatível
         const firebaseConfig = window.firebaseConfig;
         if (!firebaseConfig) {
-            throw new Error("Configuração do Firebase não encontrada. Crie 'firebase-config.js' a partir do template e carregue-o antes de app.js.");
+            console.error("Configuração do Firebase não encontrada. Crie 'firebase-config.js' a partir do template e carregue-o antes de app.js.");
+            // Mostra a tela de login e oculta o app principal
+            const loginEl = document.getElementById('login');
+            const appContainer = document.querySelector('.container');
+            if (loginEl) loginEl.style.display = 'flex';
+            if (appContainer) appContainer.style.display = 'none';
+
+            // Exibe mensagem amigável de erro
+            const errEl = document.getElementById('loginErro');
+            if (errEl) {
+                errEl.textContent = 'Configuração do Firebase ausente. Adicione o arquivo firebase-config.js no servidor (ou publique-o) para continuar.';
+                errEl.classList.add('show');
+            }
+
+            // Desativa ações de login enquanto não houver config
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) { e.preventDefault(); });
+            }
+            const googleBtn = document.getElementById('googleLoginBtn');
+            if (googleBtn) {
+                googleBtn.disabled = true;
+                googleBtn.title = 'Configuração ausente';
+            }
+            // Interrompe a inicialização para evitar erros posteriores
+            return;
         }
 
         firebase.initializeApp(firebaseConfig);
