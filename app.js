@@ -1,3 +1,8 @@
+        if (!window.Utils) {
+            throw new Error('Utils não carregado. Verifique se src/utils.js foi incluído antes de app.js.');
+        }
+        const { debounce, obterDiaSemana, obterValorPorLocal, formatarDataBR, obterPosicaoSemanaNoMes, obterDataPorPosicaoSemana } = window.Utils;
+
         // Função para navegação entre seções
         function mostrarSecao(secao) {
             document.getElementById('inicio').style.display = (secao === 'inicio') ? 'flex' : 'none';
@@ -515,50 +520,12 @@
             }
         }
         
-        // Configurações centralizadas
-        const CONFIG = {
-            VALORES_POR_LOCAL: {
-                'Intermedica Diadema': { semana: 114, fds: 125 },
-                'Beneficência Portuguesa SC': { semana: 125, fds: 135 },
-                'Hospital Christóvão da Gama Diadema': { semana: 125, fds: 125 },
-                'Hospital São Cristovão (Mooca)': { semana: 125, fds: 125 }
-            },
-            DEBOUNCE_RESIZE: 300,
-            CACHE_TTL: 5 * 60 * 1000
-        };
-
-        // Debounce function
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-
         // Cache simples
         const cache = {
             plantoes: null,
             timestamp: null,
-            TTL: CONFIG.CACHE_TTL
+            TTL: window.CONFIG.CACHE_TTL
         };
-
-        // Obtém dia da semana
-        function obterDiaSemana(dataString) {
-            const [ano, mes, dia] = dataString.split('-');
-            return new Date(Number(ano), Number(mes) - 1, Number(dia)).getDay();
-        }
-
-        // Obtém valor por local
-        function obterValorPorLocal(local, diaSemana) {
-            const config = CONFIG.VALORES_POR_LOCAL[local];
-            if (!config) return null;
-            return (diaSemana === 0 || diaSemana === 6) ? config.fds : config.semana;
-        }
 
         // Validação de plantão
         function validarPlantao(data) {
@@ -639,59 +606,7 @@
         }
 
         // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
-        function obterPosicaoSemanaNoMes(data) {
-            const diaSemana = data.getDay();
-            const diaDoMes = data.getDate();
-            const ano = data.getFullYear();
-            const mes = data.getMonth();
-            
-            // Conta quantas vezes este dia da semana ocorreu até a data atual
-            let contador = 0;
-            for (let dia = 1; dia <= diaDoMes; dia++) {
-                const dataAtual = new Date(ano, mes, dia);
-                if (dataAtual.getDay() === diaSemana) {
-                    contador++;
-                    if (dia === diaDoMes) {
-                        return contador;
-                    }
-                }
-            }
-            return contador;
-        }// Função auxiliar para encontrar uma data específica baseada na posição da semana
-        function obterDataPorPosicaoSemana(ano, mes, diaSemana, posicao) {
-            let contador = 0;
-            
-            // Itera através de todos os dias do mês
-            for (let dia = 1; dia <= 31; dia++) {
-                const data = new Date(ano, mes, dia);
-                
-                // Se saiu do mês, não existe esta posição
-                if (data.getMonth() !== mes) {
-                    // Se estamos procurando pela última ocorrência (5ª) e não encontramos,
-                    // retorna a última ocorrência que encontramos
-                    if (posicao >= 5 && contador > 0) {
-                        // Procura a última ocorrência do dia da semana no mês
-                        for (let diaReverso = 31; diaReverso >= 1; diaReverso--) {
-                            const dataReversa = new Date(ano, mes, diaReverso);
-                            if (dataReversa.getMonth() === mes && dataReversa.getDay() === diaSemana) {
-                                return dataReversa;
-                            }
-                        }
-                    }
-                    return null;
-                }
-                
-                // Se encontrou o dia da semana correto
-                if (data.getDay() === diaSemana) {
-                    contador++;
-                    if (contador === posicao) {
-                        return data;
-                    }
-                }
-            }
-            
-            return null; // Não encontrou a posição
-        }// Função para calcular datas de recorrência
+        // Função para calcular datas de recorrência
         function calcularDatasRecorrencia() {
             const dataInicial = new Date(document.getElementById('data').value);
             const tipo = document.getElementById('tipoRecorrencia').value;
