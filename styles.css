@@ -11,6 +11,11 @@
             font-size: 15px;
             line-height: 1.45;
         }
+        /* Remove padding do body na tela de login */
+        #login body,
+        body:has(#login) {
+            padding: 0;
+        }
         h1, h2, h3 { font-weight: 700; margin: 0 0 12px 0; }
         .main-btn span { font-weight: 600; }
 
@@ -652,6 +657,7 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
+        height: 100vh;
         background-image: url('./bg_app.jpg');
         background-size: cover;
         background-position: center center;
@@ -659,10 +665,14 @@
         background-attachment: scroll; /* permite scroll no mobile */
         background-color: #fbeaf3; /* fallback para caso a imagem não carregue */
         padding: 20px;
-        position: relative;
+        position: fixed; /* fixa o container para cobrir toda a viewport */
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto; /* permite scroll se necessário */
         overflow-x: hidden; /* previne transbordo horizontal */
-        max-width: 100vw; /* força largura máxima */
-        width: 100%;
+        margin: 0; /* remove qualquer margem */
     }
     
     .login-container::before {
