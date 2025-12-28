@@ -680,6 +680,8 @@
         padding: 40px 30px;
         position: relative;
         z-index: 1;
+        box-sizing: border-box;
+        overflow: hidden; /* evita que inputs/margens estourem o cartão */
     }
 
     .login-logo {
@@ -728,11 +730,14 @@
         margin-bottom: 24px;
         display: block !important;
         grid-template-columns: unset !important;
+        width: 100%;
+        max-width: 100%;
     }
 
     .login-form .form-group {
         margin-bottom: 16px;
         width: 100%;
+        max-width: 100%;
     }
 
     .login-form label {
@@ -746,6 +751,7 @@
     .login-form input {
         width: 100%;
         max-width: 100%;
+        display: block;
         padding: 12px;
         border: 1px solid #ddd;
         border-radius: 8px;
