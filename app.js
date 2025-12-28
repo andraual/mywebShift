@@ -25,8 +25,7 @@
             if (secao === 'consolidado') {
                 carregarConsolidado();
             }
-                filtrarResumo();
-            }            if (secao === 'inicio') {
+            if (secao === 'inicio') {
                 plantaoEditandoId = null;
             }
             if (secao === 'cadastro' && !plantaoEditandoId) {

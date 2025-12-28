@@ -2,9 +2,13 @@
 (function() {
     'use strict';
     
-    // Aguardar Firebase estar disponível
+    // Aguardar Firebase estar disponível E inicializado
     function aguardarFirebase(callback) {
-        if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) {
+        if (typeof firebase !== 'undefined' && 
+            firebase.auth && 
+            firebase.firestore &&
+            firebase.apps && 
+            firebase.apps.length > 0) {
             callback();
         } else {
             setTimeout(() => aguardarFirebase(callback), 100);
@@ -18,8 +22,9 @@
     }
     
     aguardarFirebase(() => {
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        try {
+            const auth = firebase.auth();
+            const db = firebase.firestore();
         
         // Toggle para mostrar/ocultar campo de valor final de semana
         const checkboxFimSemana = document.getElementById('unidadeValorFimSemanaCheck');
@@ -390,5 +395,8 @@
         }
         
         console.log('Módulo de unidades com valor diferencial carregado.');
+        } catch (erro) {
+            console.error('Erro ao inicializar módulo de unidades:', erro);
+        }
     });
 })();
