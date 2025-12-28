@@ -302,6 +302,8 @@
             align-items: center;
             justify-content: center;
             min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
         }
         #login h2 {
             text-align: center;
@@ -652,8 +654,9 @@
         min-height: 100vh;
         background-image: url('./bg_app.jpg');
         background-size: cover;
-        background-position: center;
+        background-position: center center;
         background-repeat: no-repeat;
+        background-attachment: scroll; /* permite scroll no mobile */
         background-color: #fbeaf3; /* fallback para caso a imagem não carregue */
         padding: 20px;
         position: relative;
@@ -915,6 +918,12 @@
 
         .login-container {
             padding: 10px;
+            background-size: cover; /* garante cobertura total */
+            background-position: center center;
+        }
+
+        .login-container::before {
+            background: rgba(255, 255, 255, 0.15); /* overlay mais sutil no mobile */
         }
 
         .social-login {
