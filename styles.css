@@ -661,6 +661,7 @@
         background-color: #fbeaf3; /* fallback para caso a imagem não carregue */
         padding: 20px;
         position: relative;
+        overflow-x: hidden; /* previne transbordo horizontal */
     }
     
     .login-container::before {
@@ -686,6 +687,9 @@
         box-sizing: border-box;
         overflow: hidden; /* evita que inputs/margens estourem o cartão */
     }
+
+    /* Evita overflow horizontal em telas muito pequenas devido ao min-width herdado */
+    #login .login-card { min-width: 0; }
 
     .login-logo {
         display: flex;
