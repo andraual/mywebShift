@@ -537,8 +537,8 @@
       }
       .summary-item th:nth-child(1),
       .summary-item td:nth-child(1) { width: 60px; }
-      .summary-item th:nth-child(2),
-      .summary-item td:nth-child(2) { width: 40px; }
+            .summary-item th:nth-child(2),
+            .summary-item td:nth-child(2) { width: 64px; }
       .summary-item th:nth-child(3),
       .summary-item td:nth-child(3) { width: 90px; }
     }
@@ -551,8 +551,8 @@
       }
       .summary-item th:nth-child(1),
       .summary-item td:nth-child(1) { width: 52px; } 
-      .summary-item th:nth-child(2),
-      .summary-item td:nth-child(2) { width: 36px; }
+            .summary-item th:nth-child(2),
+            .summary-item td:nth-child(2) { width: 56px; }
       .summary-item th:nth-child(3),
       .summary-item td:nth-child(3) { width: 80px; }
     }
