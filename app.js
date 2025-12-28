@@ -1489,5 +1489,6 @@ function renderizarGraficos(meses, unidades) {
         window.editarPlantao = editarPlantao;
         window.excluirPlantao = excluirPlantao;
         window.abrirPopupResumo = abrirPopupResumo;
+        window.carregarConsolidado = carregarConsolidado;
         // atualizarCalendario já está em window (definida na linha 251)
     })();
