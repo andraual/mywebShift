@@ -660,8 +660,23 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background: linear-gradient(180deg, #fff5f9 0%, #fff 60%);
+        background-image: url('bg_app.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
         padding: 20px;
+        position: relative;
+    }
+    
+    .login-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.85);
+        z-index: 0;
     }
 
     .login-card {
@@ -671,6 +686,8 @@
         width: 100%;
         max-width: 420px;
         padding: 40px 30px;
+        position: relative;
+        z-index: 1;
     }
 
     .login-logo {
