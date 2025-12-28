@@ -2,11 +2,13 @@
 // Não versione firebase-config.js (já ignorado em .gitignore).
 
 window.firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_SENDER_ID",
-  appId: "SEU_APP_ID",
-  measurementId: "SEU_MEASUREMENT_ID"
+  apiKey: "AIzaSyCPCsCD_UwBk_c4weCgTi8r0JyhdQThrZQ",
+  authDomain: "mywebshift.firebaseapp.com",
+  projectId: "mywebshift",
+  storageBucket: "mywebshift.appspot.com",
+  messagingSenderId: "994220258656",
+  appId: "1:994220258656:web:4686ab749f948e3ae19a05",
+  measurementId: "G-LF8XYGQ7M2"
 };
+
+
