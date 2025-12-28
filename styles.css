@@ -667,7 +667,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(255, 255, 255, 0.65); /* deixa a imagem aparecer mais no desktop */
+        background: rgba(255, 255, 255, 0.25); /* deixa a imagem aparecer mais no desktop */
         z-index: 0;
     }
 
