@@ -1,7 +1,16 @@
             (function() {
+        console.log('app.js: window.Utils =', window.Utils);
+        console.log('app.js: window.CONFIG =', window.CONFIG);
+        
         if (!window.Utils) {
+            console.error('Utils não carregado. Verifique se src/utils.js foi incluído antes de app.js.');
             throw new Error('Utils não carregado. Verifique se src/utils.js foi incluído antes de app.js.');
         }
+        if (!window.CONFIG) {
+            console.error('CONFIG não carregado. Verifique se src/config.js foi incluído antes de app.js.');
+            throw new Error('CONFIG não carregado. Verifique se src/config.js foi incluído antes de app.js.');
+        }
+        
         const { debounce, obterDiaSemana, obterValorPorLocal, formatarDataBR, obterPosicaoSemanaNoMes, obterDataPorPosicaoSemana } = window.Utils;
 
         // Função para navegação entre seções
