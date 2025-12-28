@@ -24,15 +24,10 @@
         }
 
         // Inicialização do Firebase usando a API compatível
-        const firebaseConfig = {
-            apiKey: "AIzaSyCPCsCD_UwBk_c4weCgTi8r0JyhdQThrZQ",
-            authDomain: "mywebshift.firebaseapp.com",
-            projectId: "mywebshift",
-            storageBucket: "mywebshift.appspot.com",
-            messagingSenderId: "994220258656",
-            appId: "1:994220258656:web:4686ab749f948e3ae19a05",
-            measurementId: "G-LF8XYGQ7M2"
-        };
+        const firebaseConfig = window.firebaseConfig;
+        if (!firebaseConfig) {
+            throw new Error("Configuração do Firebase não encontrada. Crie 'firebase-config.js' a partir do template e carregue-o antes de app.js.");
+        }
 
         firebase.initializeApp(firebaseConfig);
         firebase.analytics();
