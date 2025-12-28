@@ -153,19 +153,20 @@
             if (!listaDiv) return;
             
             try {
-                const snapshot = await db.collection('users').doc(user.uid).collection('unidades')
-                    .where('ativo', '==', true)
-                    .orderBy('nome')
-                    .get();
+                // Busca sem índice composto; filtra e ordena no cliente
+                const snapshot = await db.collection('users').doc(user.uid).collection('unidades').get();
+                const docs = snapshot.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .filter(d => d.ativo)
+                    .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
                 
-                if (snapshot.empty) {
+                if (docs.length === 0) {
                     listaDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Nenhuma unidade cadastrada. Adicione a primeira!</p>';
                     return;
                 }
                 
                 let html = '';
-                snapshot.forEach(doc => {
-                    const data = doc.data();
+                docs.forEach(data => {
                     const temFimSemana = data.valorHoraFimSemana ? true : false;
                     const infoValor = temFimSemana 
                         ? `Dia útil: R$ ${data.valorHora.toFixed(2)}/h | Fim de semana: R$ ${data.valorHoraFimSemana.toFixed(2)}/h`
@@ -178,8 +179,8 @@
                                 <p>${infoValor}</p>
                             </div>
                             <div class="unidade-acoes">
-                                <button class="btn-editar" onclick="abrirModalUnidade('${doc.id}')">Editar</button>
-                                <button class="btn-excluir" onclick="excluirUnidade('${doc.id}', '${data.nome}')">Excluir</button>
+                                <button class="btn-editar" onclick="abrirModalUnidade('${data.id}')">Editar</button>
+                                <button class="btn-excluir" onclick="excluirUnidade('${data.id}', '${data.nome}')">Excluir</button>
                             </div>
                         </div>
                     `;
@@ -201,16 +202,17 @@
             if (!select) return;
             
             try {
-                const snapshot = await db.collection('users').doc(user.uid).collection('unidades')
-                    .where('ativo', '==', true)
-                    .orderBy('nome')
-                    .get();
+                // Busca sem índice composto; filtra e ordena no cliente
+                const snapshot = await db.collection('users').doc(user.uid).collection('unidades').get();
+                const docs = snapshot.docs
+                    .map(doc => ({ id: doc.id, ...doc.data() }))
+                    .filter(d => d.ativo)
+                    .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
                 
                 const valorAtual = select.value;
                 select.innerHTML = '<option value="">Selecione uma unidade</option>';
                 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
+                docs.forEach(data => {
                     const option = document.createElement('option');
                     option.value = data.nome;
                     
@@ -309,6 +311,56 @@
             formUnidade.addEventListener('submit', salvarUnidade);
         }
         
+        // Criar unidades pré-definidas (seed) para o usuário atual
+        window.criarUnidadesPredefinidas = async function() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert('Você precisa estar logado.');
+                return;
+            }
+
+            const confirmar = confirm('Adicionar as unidades sugeridas ao seu cadastro?');
+            if (!confirmar) return;
+
+            const lista = [
+                { nome: 'Intermedica Diadema', semana: 114, fds: 125 },
+                { nome: 'Beneficência Portuguesa SC', semana: 125, fds: 135 },
+                { nome: 'Hospital Christóvão da Gama Diadema', semana: 125, fds: 125 },
+                { nome: 'Hospital São Cristovão (Mooca)', semana: 125, fds: 125 }
+            ];
+
+            try {
+                const unidadesRef = db.collection('users').doc(user.uid).collection('unidades');
+                const existentesSnap = await unidadesRef.where('ativo', '==', true).get();
+                const existentes = new Set();
+                existentesSnap.forEach(doc => {
+                    const d = doc.data();
+                    if (d && d.nome) existentes.add(d.nome);
+                });
+
+                let criadas = 0;
+                for (const u of lista) {
+                    if (existentes.has(u.nome)) continue;
+                    await unidadesRef.add({
+                        nome: u.nome,
+                        valorHora: Number(u.semana),
+                        valorHoraFimSemana: Number(u.fds),
+                        ativo: true,
+                        criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                        atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    criadas++;
+                }
+
+                await window.carregarUnidades();
+                await window.carregarUnidadesSelect();
+                alert(criadas > 0 ? `Unidades adicionadas: ${criadas}` : 'Nenhuma unidade adicionada (já existiam).');
+            } catch (erro) {
+                console.error('Erro ao criar unidades sugeridas:', erro);
+                alert('Erro ao criar unidades sugeridas.');
+            }
+        };
+
         // Carregar unidades quando o usuário logar
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -327,6 +379,10 @@
                 
                 if (secao === 'unidades') {
                     window.carregarUnidades();
+                }
+                // Sempre recarrega o select ao entrar em cadastro
+                if (secao === 'cadastro') {
+                    window.carregarUnidadesSelect();
                 }
                 
                 mostrarSecaoOriginal(secao);

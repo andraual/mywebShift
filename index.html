@@ -300,7 +300,10 @@
         <div id="unidades" style="display:none;">
             <button onclick="mostrarSecao('inicio')" style="margin-bottom:20px;">&larr; Voltar</button>
             <h2>Gerenciar Unidades</h2>
-            <button onclick="abrirModalUnidade()" style="margin-bottom: 20px;">+ Adicionar Nova Unidade</button>
+            <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                <button onclick="abrirModalUnidade()">+ Adicionar Nova Unidade</button>
+                <button onclick="criarUnidadesPredefinidas()" title="Adicionar unidades sugeridas automaticamente">+ Adicionar Unidades Sugeridas</button>
+            </div>
             <div id="listaUnidades">
                 <!-- Lista será carregada dinamicamente -->
             </div>

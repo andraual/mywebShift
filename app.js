@@ -1259,5 +1259,9 @@ async function excluirPlantao(plantaoId) {
         // Expose functions to window for onclick handlers in HTML
         window.mostrarSecao = mostrarSecao;
         window.filtrarResumo = filtrarResumo;
+        window.fecharPopup = fecharPopup;
+        window.editarPlantao = editarPlantao;
+        window.excluirPlantao = excluirPlantao;
+        window.abrirPopupResumo = abrirPopupResumo;
         // atualizarCalendario já está em window (definida na linha 251)
     })();
