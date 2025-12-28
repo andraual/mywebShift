@@ -1,3 +1,20 @@
+    /* --- Popup (modals rápidos) --- */
+    #popupModal {
+        /* width configurado via inline; reforço responsivo aqui */
+        max-width: 520px;
+        width: calc(100vw - 40px);
+    }
+    #popupModal .popup-content p { margin: 6px 0; }
+    #popupModal .popup-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 12px;
+    }
+    #popupModal .popup-actions .popup-btn { width: 100%; }
+    @media (min-width: 520px) {
+        #popupModal .popup-actions { grid-template-columns: repeat(3, 1fr); }
+    }
 /* Estilos gerais */
         *, *::before, *::after { box-sizing: border-box; }
         body {

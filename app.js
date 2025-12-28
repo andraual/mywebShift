@@ -225,15 +225,17 @@
                 aspectRatio: window.innerWidth <= 768 ? 1.2 : 1.35,
                 eventClick: function(calEvent, jsEvent, view) {
                     const confirmacao = `
-                        <div style="text-align: center;">
-                            <p>Plantão: ${calEvent.title}</p>
-                            <p>Local: ${calEvent.local}</p>
-                            <p>Valor por hora: R$ ${calEvent.valorHora}</p>
-                            <p>Total: R$ ${calEvent.total}</p>
-                            ${calEvent.observacoes ? `<p>Observações: ${calEvent.observacoes}</p>` : ''}
-                            <button onclick="editarPlantao('${calEvent.id}')">✏️ Editar</button>
-                            <button onclick="excluirPlantao('${calEvent.id}')">🗑️ Excluir</button>
-                            <button onclick="fecharPopup()">Cancelar</button>
+                        <div class="popup-content" style="text-align: center;">
+                            <p><strong>Plantão:</strong> ${calEvent.title}</p>
+                            <p><strong>Local:</strong> ${calEvent.local}</p>
+                            <p><strong>Valor por hora:</strong> R$ ${calEvent.valorHora}</p>
+                            <p><strong>Total:</strong> R$ ${calEvent.total}</p>
+                            ${calEvent.observacoes ? `<p><strong>Observações:</strong> ${calEvent.observacoes}</p>` : ''}
+                            <div class="popup-actions">
+                                <button class="popup-btn" onclick="editarPlantao('${calEvent.id}')">✏️ Editar</button>
+                                <button class="popup-btn" onclick="excluirPlantao('${calEvent.id}')">🗑️ Excluir</button>
+                                <button class="popup-btn" onclick="fecharPopup()">Cancelar</button>
+                            </div>
                         </div>
                     `;
                     const modal = document.createElement('div');
@@ -246,6 +248,8 @@
                     modal.style.borderRadius = '8px';
                     modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
                     modal.style.zIndex = '9999'; // Garante que o modal fique acima de outros elementos
+                    modal.style.width = 'calc(100vw - 40px)';
+                    modal.style.maxWidth = '520px';
                     modal.innerHTML = confirmacao;
 
                     modal.id = 'popupModal'; // Adiciona um ID ao modal para facilitar a manipulação
@@ -931,12 +935,14 @@
         // Função para exibir popup de sucesso
         function exibirPopupSucesso(mensagem, quantidade) {
             const confirmacao = `
-                <div style="text-align: center;">
+                <div class="popup-content" style="text-align: center;">
                     <p>${mensagem}</p>
                     ${quantidade > 1 ? `<p style="color: #666; font-size: 14px;">Você pode ver todos os plantões no calendário</p>` : ''}
-                    <button onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
-                    <button onclick="fecharPopup(); mostrarSecao('calendario');">Ver Calendário</button>
-                    <button onclick="fecharPopup(); mostrarSecao('inicio');">Início</button>
+                    <div class="popup-actions">
+                        <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
+                        <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('calendario');">Ver Calendário</button>
+                        <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('inicio');">Início</button>
+                    </div>
                 </div>
             `;
             const modal = document.createElement('div');
@@ -950,6 +956,8 @@
             modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
             modal.style.zIndex = '9999';
             modal.innerHTML = confirmacao;
+            modal.style.width = 'calc(100vw - 40px)';
+            modal.style.maxWidth = '520px';
             modal.id = 'popupModal';
             document.body.appendChild(modal);
         }
@@ -957,10 +965,12 @@
         // Atualize os botões de editar para passar a origem
         function abrirPopupResumo(plantaoId) {
             const confirmacao = `
-                <div style="text-align: center;">
-                    <button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
-                    <button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>
-                    <button onclick="fecharPopup()">Cancelar</button>
+                <div class="popup-content" style="text-align: center;">
+                    <div class="popup-actions">
+                        <button class="popup-btn" onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
+                        <button class="popup-btn" onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>
+                        <button class="popup-btn" onclick="fecharPopup()">Cancelar</button>
+                    </div>
                 </div>
             `;
             const modal = document.createElement('div');
@@ -974,6 +984,8 @@
             modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
             modal.style.zIndex = '9999';
             modal.innerHTML = confirmacao;
+            modal.style.width = 'calc(100vw - 40px)';
+            modal.style.maxWidth = '520px';
 
             modal.id = 'popupModal';
             document.body.appendChild(modal);
