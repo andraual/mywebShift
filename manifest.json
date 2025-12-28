@@ -1,6 +1,6 @@
 {
-  "name": "Controle de Plantões Médicos",
-  "short_name": "MyWebShift",
+  "name": "My Shift",
+  "short_name": "MyShift",
   "description": "Controle seus plantões médicos de forma fácil e organizada",
   "start_url": "./",
   "scope": "./",
