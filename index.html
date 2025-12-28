@@ -317,8 +317,16 @@
                         <input type="text" id="unidadeNome" placeholder="Ex: Hospital São Paulo" required>
                     </div>
                     <div class="form-group">
-                        <label for="unidadeValorHora">Valor por Hora (R$):</label>
+                        <label for="unidadeValorHora">Valor por Hora - Dia Útil (R$):</label>
                         <input type="number" id="unidadeValorHora" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="unidadeValorFimSemanaCheck" style="width: auto;">
+                        <label for="unidadeValorFimSemanaCheck" style="margin: 0;">Valor diferencial para Final de Semana</label>
+                    </div>
+                    <div class="form-group" id="unidadeValorFimSemanaGroup" style="display: none;">
+                        <label for="unidadeValorHoraFimSemana">Valor por Hora - Final de Semana (R$):</label>
+                        <input type="number" id="unidadeValorHoraFimSemana" step="0.01" placeholder="0.00">
                     </div>
                     <div style="display: flex; gap: 10px; margin-top: 20px;">
                         <button type="submit" style="flex: 1;">Salvar</button>

@@ -1,4 +1,4 @@
-// Gerenciamento de Unidades
+// Gerenciamento de Unidades com suporte a valores diferenciados
 (function() {
     'use strict';
     
@@ -11,18 +11,42 @@
         }
     }
     
+    // Verificar se data é final de semana
+    function ehFinalDeSemana(data) {
+        const dia = new Date(data).getDay();
+        return dia === 0 || dia === 6; // 0 = Domingo, 6 = Sábado
+    }
+    
     aguardarFirebase(() => {
         const auth = firebase.auth();
         const db = firebase.firestore();
+        
+        // Toggle para mostrar/ocultar campo de valor final de semana
+        const checkboxFimSemana = document.getElementById('unidadeValorFimSemanaCheck');
+        const grupoFimSemana = document.getElementById('unidadeValorFimSemanaGroup');
+        
+        if (checkboxFimSemana && grupoFimSemana) {
+            checkboxFimSemana.addEventListener('change', function() {
+                grupoFimSemana.style.display = this.checked ? 'block' : 'none';
+                const inputFimSemana = document.getElementById('unidadeValorHoraFimSemana');
+                if (inputFimSemana) {
+                    inputFimSemana.required = this.checked;
+                }
+            });
+        }
         
         // Abrir modal de unidade (criar ou editar)
         window.abrirModalUnidade = function(unidadeId = null) {
             const modal = document.getElementById('modalUnidade');
             const titulo = document.getElementById('modalUnidadeTitulo');
             const form = document.getElementById('formUnidade');
+            const checkboxFimSemana = document.getElementById('unidadeValorFimSemanaCheck');
+            const grupoFimSemana = document.getElementById('unidadeValorFimSemanaGroup');
             
             form.reset();
             document.getElementById('unidadeId').value = '';
+            grupoFimSemana.style.display = 'none';
+            checkboxFimSemana.checked = false;
             
             if (unidadeId) {
                 titulo.textContent = 'Editar Unidade';
@@ -35,6 +59,13 @@
                                 document.getElementById('unidadeId').value = unidadeId;
                                 document.getElementById('unidadeNome').value = data.nome;
                                 document.getElementById('unidadeValorHora').value = data.valorHora;
+                                
+                                // Carregar valor de final de semana se existir
+                                if (data.valorHoraFimSemana) {
+                                    checkboxFimSemana.checked = true;
+                                    grupoFimSemana.style.display = 'block';
+                                    document.getElementById('unidadeValorHoraFimSemana').value = data.valorHoraFimSemana;
+                                }
                             }
                         });
                 }
@@ -66,6 +97,7 @@
             const unidadeId = document.getElementById('unidadeId').value;
             const nome = document.getElementById('unidadeNome').value.trim();
             const valorHora = parseFloat(document.getElementById('unidadeValorHora').value);
+            const temValorFimSemana = document.getElementById('unidadeValorFimSemanaCheck').checked;
             
             if (!nome || isNaN(valorHora) || valorHora <= 0) {
                 alert('Preencha todos os campos corretamente.');
@@ -78,6 +110,19 @@
                 ativo: true,
                 atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
             };
+            
+            // Adicionar valor de final de semana se checkbox estiver marcado
+            if (temValorFimSemana) {
+                const valorHoraFimSemana = parseFloat(document.getElementById('unidadeValorHoraFimSemana').value);
+                if (isNaN(valorHoraFimSemana) || valorHoraFimSemana <= 0) {
+                    alert('Preencha o valor de final de semana corretamente.');
+                    return;
+                }
+                unidadeData.valorHoraFimSemana = valorHoraFimSemana;
+            } else {
+                // Remove o campo se existia antes e agora está desmarcado
+                unidadeData.valorHoraFimSemana = firebase.firestore.FieldValue.delete();
+            }
             
             try {
                 const unidadesRef = db.collection('users').doc(user.uid).collection('unidades');
@@ -121,11 +166,16 @@
                 let html = '';
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    const temFimSemana = data.valorHoraFimSemana ? true : false;
+                    const infoValor = temFimSemana 
+                        ? `Dia útil: R$ ${data.valorHora.toFixed(2)}/h | Fim de semana: R$ ${data.valorHoraFimSemana.toFixed(2)}/h`
+                        : `R$ ${data.valorHora.toFixed(2)}/hora`;
+                    
                     html += `
                         <div class="unidade-item">
                             <div class="unidade-info">
                                 <h4>${data.nome}</h4>
-                                <p>R$ ${data.valorHora.toFixed(2)}/hora</p>
+                                <p>${infoValor}</p>
                             </div>
                             <div class="unidade-acoes">
                                 <button class="btn-editar" onclick="abrirModalUnidade('${doc.id}')">Editar</button>
@@ -142,7 +192,7 @@
             }
         };
         
-        // Carregar unidades no select
+        // Carregar unidades no select com detecção de final de semana
         window.carregarUnidadesSelect = async function() {
             const user = auth.currentUser;
             if (!user) return;
@@ -163,8 +213,16 @@
                     const data = doc.data();
                     const option = document.createElement('option');
                     option.value = data.nome;
-                    option.textContent = `${data.nome} - R$ ${data.valorHora.toFixed(2)}/h`;
+                    
+                    // Armazenar ambos os valores como data attributes
                     option.dataset.valorHora = data.valorHora;
+                    if (data.valorHoraFimSemana) {
+                        option.dataset.valorHoraFimSemana = data.valorHoraFimSemana;
+                        option.textContent = `${data.nome} (Útil: R$ ${data.valorHora.toFixed(2)}/h | FDS: R$ ${data.valorHoraFimSemana.toFixed(2)}/h)`;
+                    } else {
+                        option.textContent = `${data.nome} - R$ ${data.valorHora.toFixed(2)}/h`;
+                    }
+                    
                     select.appendChild(option);
                 });
                 
@@ -174,14 +232,49 @@
                 const newSelect = select.cloneNode(true);
                 select.parentNode.replaceChild(newSelect, select);
                 
-                // Adiciona novo listener
+                // Adiciona novo listener que detecta o dia da semana
                 newSelect.addEventListener('change', function() {
                     const selectedOption = this.options[this.selectedIndex];
                     const valorHora = selectedOption.dataset.valorHora;
+                    const valorHoraFimSemana = selectedOption.dataset.valorHoraFimSemana;
+                    const dataInput = document.getElementById('data');
+                    
                     if (valorHora) {
-                        document.getElementById('valorHora').value = parseFloat(valorHora).toFixed(2);
+                        let valorAplicar = parseFloat(valorHora);
+                        
+                        // Se tiver data selecionada, verificar se é final de semana
+                        if (dataInput && dataInput.value && valorHoraFimSemana) {
+                            if (ehFinalDeSemana(dataInput.value)) {
+                                valorAplicar = parseFloat(valorHoraFimSemana);
+                            }
+                        }
+                        
+                        document.getElementById('valorHora').value = valorAplicar.toFixed(2);
                     }
                 });
+                
+                // Listener para quando a data mudar, atualizar o valor se necessário
+                const dataInput = document.getElementById('data');
+                if (dataInput) {
+                    dataInput.addEventListener('change', function() {
+                        const selectLocal = document.getElementById('local');
+                        if (selectLocal && selectLocal.value) {
+                            const selectedOption = selectLocal.options[selectLocal.selectedIndex];
+                            const valorHora = selectedOption.dataset.valorHora;
+                            const valorHoraFimSemana = selectedOption.dataset.valorHoraFimSemana;
+                            
+                            if (valorHora) {
+                                let valorAplicar = parseFloat(valorHora);
+                                
+                                if (valorHoraFimSemana && ehFinalDeSemana(this.value)) {
+                                    valorAplicar = parseFloat(valorHoraFimSemana);
+                                }
+                                
+                                document.getElementById('valorHora').value = valorAplicar.toFixed(2);
+                            }
+                        }
+                    });
+                }
             } catch (erro) {
                 console.error('Erro:', erro);
                 select.innerHTML = '<option value="">Erro ao carregar</option>';
@@ -240,6 +333,6 @@
             };
         }
         
-        console.log('Módulo de unidades carregado.');
+        console.log('Módulo de unidades com valor diferencial carregado.');
     });
 })();
