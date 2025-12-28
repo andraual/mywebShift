@@ -302,7 +302,7 @@
         <div id="consolidado" style="display:none;">
             <button onclick="mostrarSecao('resumo')" style="margin-bottom:20px;">&larr; Voltar</button>
             <h2>Consolidado Anual</h2>
-            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+            <div class="consolidado-header">
                 <div class="form-group" style="flex: 1; min-width: 150px;">
                     <label for="anoConsolidado">Ano:</label>
                     <select id="anoConsolidado">
@@ -364,8 +364,8 @@
             <!-- Tabela de Detalhes por Unidade -->
             <div style="margin-bottom: 40px;">
                 <h3>Detalhes por Unidade</h3>
-                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
+                <div class="consolidado-wrapper" style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
+                    <table class="consolidado-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
                                 <th style="padding: 12px; text-align: left; font-weight: 600;">Unidade</th>
@@ -385,8 +385,8 @@
             <!-- Tabela de Evolução Mensal -->
             <div style="margin-bottom: 40px;">
                 <h3>Evolução Mensal</h3>
-                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse;">
+                <div class="consolidado-wrapper" style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-x: auto;">
+                    <table class="consolidado-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
                             <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
                                 <th style="padding: 12px; text-align: left; font-weight: 600;">Mês</th>
