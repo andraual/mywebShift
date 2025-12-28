@@ -1258,12 +1258,8 @@ async function excluirPlantao(plantaoId) {
             setTimeout(ajustarCalendarioMobile, 800);
         });
         
-        // Executa quando mostrar a seção do calendário
-        const originalMostrarSecao = window.mostrarSecao;
-        window.mostrarSecao = function(secao) {
-            originalMostrarSecao(secao);
-            if (secao === 'calendario') {
-                setTimeout(ajustarCalendarioMobile, 300);
-            }
-        };
+        // Expose functions to window for onclick handlers in HTML
+        window.mostrarSecao = mostrarSecao;
+        window.filtrarResumo = filtrarResumo;
+        window.atualizarCalendario = atualizarCalendario;
     })();
