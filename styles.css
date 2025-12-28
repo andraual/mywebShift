@@ -897,6 +897,17 @@
         .login-card h2 {
             font-size: 20px;
         }
+    }
+
+    /* Padding extra compacto para telas muito pequenas */
+    @media (max-width: 390px) {
+        .login-card {
+            padding: 24px 16px;
+        }
+
+        .login-container {
+            padding: 15px;
+        }
 
         .social-login {
             grid-template-columns: 1fr;
