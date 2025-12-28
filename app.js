@@ -1,4 +1,4 @@
-            (function() {
+        (function() {
         console.log('app.js loaded. window.Utils:', !!window.Utils, 'window.CONFIG:', !!window.CONFIG);
         
         // Instead of destructuring, use window.Utils directly to avoid scope issues
@@ -59,7 +59,6 @@
             // Interrompe a inicialização para evitar erros posteriores
             return;
         }
-    })();
 
         firebase.initializeApp(firebaseConfig);
         firebase.analytics();
