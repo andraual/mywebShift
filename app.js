@@ -392,6 +392,9 @@
                     mensagem = 'E-mail inválido.';
                 } else if (error.code === 'auth/user-disabled') {
                     mensagem = 'Usuário desabilitado.';
+                } else {
+                    // Exibe código e mensagem para diagnósticos (config/domínios/providers)
+                    mensagem = `Erro (${error.code}): ${error.message}`;
                 }
                 
                 erroDiv.textContent = mensagem;
@@ -419,6 +422,8 @@
                     mensagem = 'Login cancelado.';
                 } else if (error.code === 'auth/network-request-failed') {
                     mensagem = 'Erro de conexão.';
+                } else {
+                    mensagem = `Erro (${error.code}): ${error.message}`;
                 }
                 erroDiv.textContent = mensagem;
                 erroDiv.classList.add('show');
@@ -506,6 +511,8 @@
                     mensagem = 'Senha muito fraca.';
                 } else if (error.code === 'auth/network-request-failed') {
                     mensagem = 'Erro de conexão.';
+                } else {
+                    mensagem = `Erro (${error.code}): ${error.message}`;
                 }
                 
                 erroDiv.textContent = mensagem;
