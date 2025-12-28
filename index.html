@@ -151,6 +151,15 @@
                     </svg>
                     <span>Financeiro</span>
                 </button>
+
+                <button class="main-btn" onclick="mostrarSecao('unidades')" title="Gerenciar Unidades">
+                    <!-- Ícone de hospital/prédio -->
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="3" width="14" height="18" rx="1" stroke="#fff" stroke-width="1.6" fill="rgba(255,255,255,0.1)"/>
+                        <path d="M12 8v6M9 11h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                    <span>Unidades</span>
+                </button>
             </div>
             <div class="theme-selector">
                 <input type="radio" id="themeLight" name="theme" value="light" checked>
@@ -179,12 +188,12 @@
                     <input type="number" id="tempoPlantao" step="0.1" required>
                 </div>                <div class="form-group">
                     <label for="local">Local:</label>
-                    <select id="local" required>
-                        <option value="Intermedica Diadema">Intermedica Diadema</option>
-                        <option value="Beneficência Portuguesa SC">Beneficência Portuguesa SC</option>
-                        <option value="Hospital Christóvão da Gama Diadema">Hospital Christóvão da Gama Diadema</option>
-                        <option value="Hospital São Cristovão (Mooca)">Hospital São Cristovão (Mooca)</option>
-                    </select>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <select id="local" required style="flex: 1;">
+                            <option value="">Carregando...</option>
+                        </select>
+                        <button type="button" onclick="abrirModalUnidade()" style="padding: 12px 16px; white-space: nowrap;" title="Adicionar nova unidade">+ Nova</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="valorHora">Valor por Hora (R$):</label>
@@ -286,6 +295,38 @@
                 <p style="font-size: 18px; margin: 10px 0;"><strong>Valor Total:</strong> R$ <span id="totalValor">0,00</span></p>
             </div>
         </div>
+
+        <!-- Seção de Gerenciamento de Unidades -->
+        <div id="unidades" style="display:none;">
+            <button onclick="mostrarSecao('inicio')" style="margin-bottom:20px;">&larr; Voltar</button>
+            <h2>Gerenciar Unidades</h2>
+            <button onclick="abrirModalUnidade()" style="margin-bottom: 20px;">+ Adicionar Nova Unidade</button>
+            <div id="listaUnidades">
+                <!-- Lista será carregada dinamicamente -->
+            </div>
+        </div>
+
+        <!-- Modal de Cadastro/Edição de Unidade -->
+        <div id="modalUnidade" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 30px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 8px 30px rgba(0,0,0,0.2);">
+                <h3 id="modalUnidadeTitulo">Adicionar Unidade</h3>
+                <form id="formUnidade" style="display: block; grid-template-columns: 1fr;">
+                    <input type="hidden" id="unidadeId">
+                    <div class="form-group">
+                        <label for="unidadeNome">Nome da Unidade:</label>
+                        <input type="text" id="unidadeNome" placeholder="Ex: Hospital São Paulo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="unidadeValorHora">Valor por Hora (R$):</label>
+                        <input type="number" id="unidadeValorHora" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" style="flex: 1;">Salvar</button>
+                        <button type="button" onclick="fecharModalUnidade()" style="flex: 1; background: #ccc;">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -300,5 +341,6 @@
     <script src="src/utils.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
+    <script src="unidades.js"></script>
 </body>
 </html>

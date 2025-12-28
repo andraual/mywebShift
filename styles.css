@@ -904,6 +904,54 @@
         display: block;
     }
 
+    /* Estilos para modal de unidades */
+    #modalUnidade {
+        display: none;
+    }
+    #modalUnidade.show {
+        display: flex !important;
+    }
+    .unidade-item {
+        background: #fff;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: transform 0.2s;
+    }
+    .unidade-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255,102,170,0.12);
+    }
+    .unidade-info h4 {
+        margin: 0 0 4px 0;
+        color: #333;
+        font-size: 16px;
+    }
+    .unidade-info p {
+        margin: 0;
+        color: #666;
+        font-size: 14px;
+    }
+    .unidade-acoes {
+        display: flex;
+        gap: 8px;
+    }
+    .unidade-acoes button {
+        padding: 8px 14px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+    .btn-editar {
+        background: linear-gradient(90deg, #4dabf7 0%, #228be6 100%);
+    }
+    .btn-excluir {
+        background: linear-gradient(90deg, #ff8787 0%, #fa5252 100%);
+    }
+
     @media (max-width: 600px) {
         .login-card {
             padding: 30px 20px;
