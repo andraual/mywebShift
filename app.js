@@ -1219,7 +1219,6 @@ async function excluirPlantao(plantaoId) {
 }
     
 
-    (function(){
         function isMobileDevice() {
             return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
@@ -1260,5 +1259,5 @@ async function excluirPlantao(plantaoId) {
         // Expose functions to window for onclick handlers in HTML
         window.mostrarSecao = mostrarSecao;
         window.filtrarResumo = filtrarResumo;
-        window.atualizarCalendario = atualizarCalendario;
+        // atualizarCalendario já está em window (definida na linha 251)
     })();
