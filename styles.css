@@ -410,6 +410,7 @@
         padding-top: calc(var(--safe-top));
         padding-bottom: calc(var(--safe-bottom));
         overflow-x: hidden;
+        max-width: 100vw; /* força limite de largura na viewport */
     }
 
     .container {
@@ -657,6 +658,8 @@
         padding: 20px;
         position: relative;
         overflow-x: hidden; /* previne transbordo horizontal */
+        max-width: 100vw; /* força largura máxima */
+        width: 100%;
     }
     
     .login-container::before {
@@ -901,12 +904,17 @@
 
     /* Padding extra compacto para telas muito pequenas */
     @media (max-width: 390px) {
+        body {
+            padding: 0 !important; /* remove padding do body em mobile */
+        }
+
         .login-card {
             padding: 24px 16px;
+            margin: 0 10px; /* margem lateral em vez de padding no container */
         }
 
         .login-container {
-            padding: 15px;
+            padding: 10px;
         }
 
         .social-login {
