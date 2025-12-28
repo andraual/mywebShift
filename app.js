@@ -1,3 +1,4 @@
+            (function() {
         if (!window.Utils) {
             throw new Error('Utils não carregado. Verifique se src/utils.js foi incluído antes de app.js.');
         }
@@ -58,6 +59,7 @@
             // Interrompe a inicialização para evitar erros posteriores
             return;
         }
+    })();
 
         firebase.initializeApp(firebaseConfig);
         firebase.analytics();
