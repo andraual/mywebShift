@@ -911,6 +911,15 @@
 
                         await db.collection("plantoes").add(plantao);
                         console.log("Plantão cadastrado com sucesso!");
+                        // Guarda última criação para sugestão de calendário (mobile)
+                        window.__ultimoPlantaoSalvo = {
+                            data,
+                            horaInicio,
+                            tempoPlantao: Number(tempoPlantao),
+                            local,
+                            observacoes,
+                            valorHora: Number(valorHoraFinal)
+                        };
                         exibirPopupSucesso("Plantão cadastrado com sucesso!", 1);
                         
                         // Adiciona ano do plantão ao resumo financeiro
@@ -942,6 +951,10 @@
                         <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
                         <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('calendario');">Ver Calendário</button>
                         <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('inicio');">Início</button>
+                        ${quantidade === 1 && window.isMobileDevice && window.isMobileDevice() && window.__ultimoPlantaoSalvo ? `
+                            <button class="popup-btn" onclick="adicionarAoCalendarioGoogle()">Adicionar no Google Calendar</button>
+                            <button class="popup-btn" onclick="baixarICSPlantao()">Baixar .ics (Apple/Outlook)</button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -961,6 +974,72 @@
             modal.id = 'popupModal';
             document.body.appendChild(modal);
         }
+
+        // Detecta se é dispositivo móvel
+        window.isMobileDevice = function() {
+            return /Mobi|Android/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+        };
+
+        // Formata datas para Google Calendar (UTC)
+        function formatGoogleDates(plantao) {
+            const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
+            const end = new Date(start.getTime() + plantao.tempoPlantao * 60 * 60 * 1000);
+            const toGoogle = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+            return { start: toGoogle(start), end: toGoogle(end) };
+        }
+
+        // Abre Google Calendar com evento pré-preenchido
+        window.adicionarAoCalendarioGoogle = function() {
+            const p = window.__ultimoPlantaoSalvo;
+            if (!p) { alert('Nenhum plantão encontrado para adicionar.'); return; }
+            const { start, end } = formatGoogleDates(p);
+            const text = encodeURIComponent(`Plantão - ${p.local}`);
+            const details = encodeURIComponent(`Horas: ${p.tempoPlantao}\nValor/hora: R$ ${p.valorHora}${p.observacoes ? `\nObs: ${p.observacoes}` : ''}`);
+            const location = encodeURIComponent(p.local);
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}%2F${end}&details=${details}&location=${location}`;
+            window.open(url, '_blank');
+        };
+
+        // Gera conteúdo ICS
+        function gerarICS(plantao) {
+            const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@mywebshift`;
+            const now = new Date();
+            const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
+            const end = new Date(start.getTime() + plantao.tempoPlantao * 60 * 60 * 1000);
+            const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+            const lines = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//mywebShift//EN',
+                'BEGIN:VEVENT',
+                `UID:${uid}`,
+                `DTSTAMP:${fmt(now)}`,
+                `DTSTART:${fmt(start)}`,
+                `DTEND:${fmt(end)}`,
+                `SUMMARY:Plantão - ${plantao.local}`,
+                `DESCRIPTION:Horas: ${plantao.tempoPlantao}\\nValor/hora: R$ ${plantao.valorHora}${plantao.observacoes ? `\\nObs: ${plantao.observacoes}` : ''}`,
+                `LOCATION:${plantao.local}`,
+                'END:VEVENT',
+                'END:VCALENDAR'
+            ];
+            return lines.join('\r\n');
+        }
+
+        // Baixa arquivo .ics
+        window.baixarICSPlantao = function() {
+            const p = window.__ultimoPlantaoSalvo;
+            if (!p) { alert('Nenhum plantão encontrado para adicionar.'); return; }
+            const ics = gerarICS(p);
+            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const nome = `plantao_${p.data}_${(p.local || 'local').replace(/\s+/g, '_')}.ics`;
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nome;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+        };
 
         // Atualize os botões de editar para passar a origem
         function abrirPopupResumo(plantaoId) {
