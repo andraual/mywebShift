@@ -844,6 +844,15 @@
 
                     await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
                     console.log("Plantão atualizado com sucesso!");
+                    // Guarda última atualização para sugestão de calendário (mobile)
+                    window.__ultimoPlantaoSalvo = {
+                        data,
+                        horaInicio,
+                        tempoPlantao: Number(tempoPlantao),
+                        local,
+                        observacoes,
+                        valorHora: Number(valorHoraFinal)
+                    };
                     plantaoEditandoId = null;
                     
                     exibirPopupSucesso("Plantão atualizado com sucesso!", 1);
