@@ -253,6 +253,19 @@
                     modal.innerHTML = confirmacao;
 
                     modal.id = 'popupModal'; // Adiciona um ID ao modal para facilitar a manipulação
+                    
+                    // Adiciona backdrop e fecha ao clicar fora
+                    const backdrop = document.createElement('div');
+                    backdrop.id = 'popupBackdrop';
+                    backdrop.style.position = 'fixed';
+                    backdrop.style.top = '0';
+                    backdrop.style.left = '0';
+                    backdrop.style.width = '100%';
+                    backdrop.style.height = '100%';
+                    backdrop.style.background = 'rgba(0,0,0,0.5)';
+                    backdrop.style.zIndex = '9998';
+                    backdrop.onclick = fecharPopup;
+                    document.body.appendChild(backdrop);
                     document.body.appendChild(modal);
                 }
             });
@@ -981,6 +994,19 @@
             modal.style.width = 'calc(100vw - 40px)';
             modal.style.maxWidth = '520px';
             modal.id = 'popupModal';
+            
+            // Adiciona backdrop e fecha ao clicar fora
+            const backdrop = document.createElement('div');
+            backdrop.id = 'popupBackdrop';
+            backdrop.style.position = 'fixed';
+            backdrop.style.top = '0';
+            backdrop.style.left = '0';
+            backdrop.style.width = '100%';
+            backdrop.style.height = '100%';
+            backdrop.style.background = 'rgba(0,0,0,0.5)';
+            backdrop.style.zIndex = '9998';
+            backdrop.onclick = fecharPopup;
+            document.body.appendChild(backdrop);
             document.body.appendChild(modal);
         }
 
@@ -1076,14 +1102,31 @@
             modal.style.maxWidth = '520px';
 
             modal.id = 'popupModal';
+            
+            // Adiciona backdrop e fecha ao clicar fora
+            const backdrop = document.createElement('div');
+            backdrop.id = 'popupBackdrop';
+            backdrop.style.position = 'fixed';
+            backdrop.style.top = '0';
+            backdrop.style.left = '0';
+            backdrop.style.width = '100%';
+            backdrop.style.height = '100%';
+            backdrop.style.background = 'rgba(0,0,0,0.5)';
+            backdrop.style.zIndex = '9998';
+            backdrop.onclick = fecharPopup;
+            document.body.appendChild(backdrop);
             document.body.appendChild(modal);
         }
 
         // Função para fechar o popup
         function fecharPopup() {
             const modal = document.getElementById('popupModal');
+            const backdrop = document.getElementById('popupBackdrop');
             if (modal) {
                 document.body.removeChild(modal);
+            }
+            if (backdrop) {
+                document.body.removeChild(backdrop);
             }
         }        // Mostrar/ocultar campo de valor cheio e calcular valorHora automaticamente
 document.getElementById('valorCheioCheck').addEventListener('change', function() {
