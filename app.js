@@ -703,23 +703,16 @@
             const local = document.getElementById('local').value;
             const valorHoraInput = document.getElementById('valorHora');
 
-            console.log('[atualizarValorHora] Data selecionada:', data);
-            console.log('[atualizarValorHora] Local selecionado:', local);
-
             if (!data || !local) {
                 valorHoraInput.value = '';
                 return;
             }
 
             const diaSemana = window.Utils.obterDiaSemana(data);
-            console.log('[atualizarValorHora] Dia da semana calculado:', diaSemana);
-            
             const valor = window.Utils.obterValorPorLocal(local, diaSemana);
-            console.log('[atualizarValorHora] Valor retornado:', valor);
             
             if (valor !== null) {
                 valorHoraInput.value = valor;
-                console.log('[atualizarValorHora] Campo preenchido com:', valor);
             }
         }
         

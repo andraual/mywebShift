@@ -16,9 +16,35 @@
     }
     
     // Verificar se data é final de semana
-    function ehFinalDeSemana(data) {
-        const dia = new Date(data).getDay();
-        return dia === 0 || dia === 6; // 0 = Domingo, 6 = Sábado
+    function ehFinalDeSemana(dataString) {
+        if (window.Utils && typeof window.Utils.obterDiaSemana === 'function') {
+            const diaSemana = window.Utils.obterDiaSemana(dataString);
+            return diaSemana === 0 || diaSemana === 6;
+        }
+        const [ano, mes, dia] = dataString.split('-').map(Number);
+        const data = new Date(ano, mes - 1, dia);
+        const diaSemana = data.getDay();
+        return diaSemana === 0 || diaSemana === 6; // 0 = Domingo, 6 = Sábado
+    }
+
+    function calcularValorHora(local, dataString, valorHora, valorHoraFimSemana) {
+        if (!dataString) return valorHora;
+
+        const isFds = ehFinalDeSemana(dataString);
+
+        if (valorHoraFimSemana) {
+            return isFds ? parseFloat(valorHoraFimSemana) : parseFloat(valorHora);
+        }
+
+        if (window.Utils && typeof window.Utils.obterDiaSemana === 'function' && typeof window.Utils.obterValorPorLocal === 'function') {
+            const diaSemana = window.Utils.obterDiaSemana(dataString);
+            const valorConfig = window.Utils.obterValorPorLocal(local, diaSemana);
+            if (valorConfig !== null) {
+                return valorConfig;
+            }
+        }
+
+        return parseFloat(valorHora);
     }
     
     aguardarFirebase(() => {
@@ -247,16 +273,9 @@
                     const dataInput = document.getElementById('data');
                     
                     if (valorHora) {
-                        let valorAplicar = parseFloat(valorHora);
-                        
-                        // Se tiver data selecionada, verificar se é final de semana
-                        if (dataInput && dataInput.value && valorHoraFimSemana) {
-                            if (ehFinalDeSemana(dataInput.value)) {
-                                valorAplicar = parseFloat(valorHoraFimSemana);
-                            }
-                        }
-                        
-                        document.getElementById('valorHora').value = valorAplicar.toFixed(2);
+                        const dataSelecionada = dataInput ? dataInput.value : '';
+                        const valorAplicar = calcularValorHora(selectedOption.value, dataSelecionada, valorHora, valorHoraFimSemana);
+                        document.getElementById('valorHora').value = Number(valorAplicar).toFixed(2);
                     }
                 });
                 
@@ -271,13 +290,8 @@
                             const valorHoraFimSemana = selectedOption.dataset.valorHoraFimSemana;
                             
                             if (valorHora) {
-                                let valorAplicar = parseFloat(valorHora);
-                                
-                                if (valorHoraFimSemana && ehFinalDeSemana(this.value)) {
-                                    valorAplicar = parseFloat(valorHoraFimSemana);
-                                }
-                                
-                                document.getElementById('valorHora').value = valorAplicar.toFixed(2);
+                                const valorAplicar = calcularValorHora(selectedOption.value, this.value, valorHora, valorHoraFimSemana);
+                                document.getElementById('valorHora').value = Number(valorAplicar).toFixed(2);
                             }
                         }
                     });
