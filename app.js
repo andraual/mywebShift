@@ -1435,6 +1435,8 @@ async function excluirPlantao(plantaoId) {
 
         await db.collection("plantoes").doc(plantaoId).delete();
 
+        await sincronizarDadosAposSalvar();
+
         // Remove o popup após exclusão
         fecharPopup();
 
