@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Datas - Weekend Check</title>
+</head>
+<body>
+    <h1>Teste de Datas</h1>
+    <div id="results"></div>
+
+    <script src="src/config.js"></script>
+    <script src="src/utils.js"></script>
+    <script>
+        const testDates = [
+            '2026-02-08', // Domingo
+            '2026-02-09', // Segunda
+            '2026-02-14', // Sábado
+            '2026-02-15', // Domingo
+            '2026-02-16', // Segunda
+            '2026-02-13', // Sexta
+        ];
+
+        const results = document.getElementById('results');
+        
+        testDates.forEach(dateStr => {
+            const date = new Date(dateStr + 'T00:00:00');
+            const dayOfWeek = date.getDay();
+            const dayName = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek];
+            
+            // Teste com a função do app
+            const diaSemana = window.Utils.obterDiaSemana(dateStr);
+            const valor = window.Utils.obterValorPorLocal('Beneficência Portuguesa SC', diaSemana);
+            
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const expectedValue = isWeekend ? 135 : 125;
+            const status = (valor === expectedValue) ? '✅' : '❌';
+            
+            results.innerHTML += `
+                <p>
+                    <strong>${dateStr}</strong> ${status}<br>
+                    ${dayName} (dia ${dayOfWeek})<br>
+                    Função retornou: dia=${diaSemana}, valor=R$ ${valor}<br>
+                    Esperado: R$ ${expectedValue} (${isWeekend ? 'FDS' : 'Semana'})
+                </p>
+                <hr>
+            `;
+        });
+    </script>
+</body>
+</html>
