@@ -223,6 +223,51 @@
                 events: [],
                 height: getCalendarHeight(),
                 aspectRatio: window.innerWidth <= 768 ? 1.2 : 1.35,
+                dayClick: function(date, jsEvent, view) {
+                    // Formata a data no formato YYYY-MM-DD
+                    const dataFormatada = date.format('YYYY-MM-DD');
+                    const dataExibicao = date.format('DD/MM/YYYY');
+                    
+                    // Cria o modal de confirmação
+                    const confirmacao = `
+                        <div class="popup-content" style="text-align: center;">
+                            <p style="font-size: 18px; margin-bottom: 20px;">📅 Deseja cadastrar um plantão para o dia <strong>${dataExibicao}</strong>?</p>
+                            <div class="popup-actions">
+                                <button class="popup-btn" onclick="cadastrarPlantaoComData('${dataFormatada}')">✅ Sim, cadastrar</button>
+                                <button class="popup-btn" onclick="fecharPopup()">❌ Cancelar</button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const modal = document.createElement('div');
+                    modal.style.position = 'fixed';
+                    modal.style.top = '50%';
+                    modal.style.left = '50%';
+                    modal.style.transform = 'translate(-50%, -50%)';
+                    modal.style.background = 'white';
+                    modal.style.padding = '20px';
+                    modal.style.borderRadius = '8px';
+                    modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+                    modal.style.zIndex = '9999';
+                    modal.style.width = 'calc(100vw - 40px)';
+                    modal.style.maxWidth = '420px';
+                    modal.innerHTML = confirmacao;
+                    modal.id = 'popupModal';
+                    
+                    // Adiciona backdrop
+                    const backdrop = document.createElement('div');
+                    backdrop.id = 'popupBackdrop';
+                    backdrop.style.position = 'fixed';
+                    backdrop.style.top = '0';
+                    backdrop.style.left = '0';
+                    backdrop.style.width = '100%';
+                    backdrop.style.height = '100%';
+                    backdrop.style.background = 'rgba(0,0,0,0.5)';
+                    backdrop.style.zIndex = '9998';
+                    backdrop.onclick = fecharPopup;
+                    document.body.appendChild(backdrop);
+                    document.body.appendChild(modal);
+                },
                 eventClick: function(calEvent, jsEvent, view) {
                     const confirmacao = `
                         <div class="popup-content" style="text-align: center;">
@@ -1625,6 +1670,30 @@ function renderizarGraficos(meses, unidades) {
             setTimeout(ajustarCalendarioMobile, 800);
         });
         
+        // Função para cadastrar plantão com data pré-preenchida
+        function cadastrarPlantaoComData(data) {
+            // Fecha o popup
+            fecharPopup();
+            
+            // Limpa o formulário
+            document.getElementById('plantaoForm').reset();
+            
+            // Preenche o campo de data
+            document.getElementById('data').value = data;
+            
+            // Reseta variáveis de edição
+            plantaoEditandoId = null;
+            
+            // Atualiza o título
+            document.querySelector('#cadastro h2').textContent = 'Cadastrar Novo Plantão';
+            
+            // Reabilita recorrência
+            document.getElementById('recorrenteCheck').disabled = false;
+            
+            // Navega para a seção de cadastro
+            mostrarSecao('cadastro');
+        }
+        
         // Expose functions to window for onclick handlers in HTML
         window.mostrarSecao = mostrarSecao;
         window.filtrarResumo = filtrarResumo;
@@ -1633,5 +1702,6 @@ function renderizarGraficos(meses, unidades) {
         window.excluirPlantao = excluirPlantao;
         window.abrirPopupResumo = abrirPopupResumo;
         window.carregarConsolidado = carregarConsolidado;
+        window.cadastrarPlantaoComData = cadastrarPlantaoComData;
         // atualizarCalendario já está em window (definida na linha 251)
     })();
