@@ -8,8 +8,10 @@
  * @returns {number} 0=Domingo, 1=Segunda, ..., 6=Sábado
  */
 export function obterDiaSemana(dataString) {
-    const [ano, mes, dia] = dataString.split('-');
-    return new Date(Number(ano), Number(mes) - 1, Number(dia)).getDay();
+    // Garante que a data seja interpretada no horário local, sem problemas de timezone
+    const [ano, mes, dia] = dataString.split('-').map(Number);
+    const data = new Date(ano, mes - 1, dia);
+    return data.getDay();
 }
 
 /**

@@ -13,14 +13,17 @@
   }
 
   function obterDiaSemana(dataString) {
-    const [ano, mes, dia] = dataString.split('-');
-    return new Date(Number(ano), Number(mes) - 1, Number(dia)).getDay();
+    // Garante que a data seja interpretada no horário local, sem problemas de timezone
+    const [ano, mes, dia] = dataString.split('-').map(Number);
+    const data = new Date(ano, mes - 1, dia);
+    return data.getDay();
   }
 
   function obterValorPorLocal(local, diaSemana) {
     const config = global.CONFIG && global.CONFIG.VALORES_POR_LOCAL[local];
     if (!config) return null;
-    return (diaSemana === 0 || diaSemana === 6) ? config.fds : config.semana;
+    // Sábado = 6, Domingo = 0
+    return (diaSemana === 6 || diaSemana === 0) ? config.fds : config.semana;
   }
 
   function formatarDataBR(data) {

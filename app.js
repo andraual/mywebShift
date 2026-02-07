@@ -628,6 +628,29 @@
             TTL: window.CONFIG.CACHE_TTL
         };
 
+        function invalidarCachePlantoes() {
+            cache.plantoes = null;
+            cache.timestamp = null;
+        }
+
+        async function sincronizarDadosAposSalvar() {
+            invalidarCachePlantoes();
+
+            if (window.atualizarCalendario) {
+                await window.atualizarCalendario();
+            }
+
+            const resumoEl = document.getElementById('resumo');
+            if (resumoEl && resumoEl.style.display !== 'none') {
+                filtrarResumo();
+            }
+
+            const consolidadoEl = document.getElementById('consolidado');
+            if (consolidadoEl && consolidadoEl.style.display !== 'none') {
+                carregarConsolidado();
+            }
+        }
+
         // Validação de plantão
         function validarPlantao(data) {
             const erros = [];
@@ -914,6 +937,7 @@
                     plantaoEditandoId = null;
                     
                     exibirPopupSucesso("Plantão atualizado com sucesso!", 1);
+                    await sincronizarDadosAposSalvar();
                 } else {
                     // Modo criação - verifica recorrência
                     if (recorrenteCheck) {
@@ -957,6 +981,7 @@
                         
                         console.log(`${plantoesCriados} plantões recorrentes cadastrados!`);
                         exibirPopupSucesso(`${plantoesCriados} plantões recorrentes cadastrados com sucesso!`, plantoesCriados);
+                        await sincronizarDadosAposSalvar();
                         
                         // Adiciona ano do plantão ao resumo financeiro
                         const anoPlantao = Number(data.split('-')[0]);
@@ -988,6 +1013,7 @@
                             valorHora: Number(valorHoraFinal)
                         };
                         exibirPopupSucesso("Plantão cadastrado com sucesso!", 1);
+                        await sincronizarDadosAposSalvar();
                         
                         // Adiciona ano do plantão ao resumo financeiro
                         const anoPlantao = Number(data.split('-')[0]);
