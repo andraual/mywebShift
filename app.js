@@ -729,6 +729,13 @@
             return `${dia}/${mes}/${ano}`;
         }
 
+        function formatarDataISO(data) {
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            return `${ano}-${mes}-${dia}`;
+        }
+
         // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
         // Função para calcular datas de recorrência
         function calcularDatasRecorrencia() {
@@ -945,7 +952,7 @@
                         let plantoesCriados = 0;
                         
                         for (const dataPlantao of datas) {
-                            const dataFormatada = dataPlantao.toISOString().split('T')[0];
+                            const dataFormatada = formatarDataISO(dataPlantao);
                             
                             // Recalcula valor por hora para cada data usando função centralizada
                             const dataString = dataFormatada;
