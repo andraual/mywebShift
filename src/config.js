@@ -8,7 +8,6 @@
         // Localização e Idioma
         MOEDA: 'pt-BR',
         FORMATO_DATA: 'YYYY-MM-DD',
-        APP_VERSION: '1.2',
 
         // Valores por Local
         VALORES_POR_LOCAL: {

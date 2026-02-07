@@ -128,13 +128,6 @@
             localStorage.setItem('theme', tema);
         }
 
-        function atualizarVersaoApp() {
-            const el = document.getElementById('appVersion');
-            if (el && window.CONFIG && window.CONFIG.APP_VERSION) {
-                el.textContent = `Versão ${window.CONFIG.APP_VERSION}`;
-            }
-        }
-
         // Event listeners para mudar tema
         document.getElementById('themeLight').addEventListener('change', function() {
             if (this.checked) {
@@ -154,14 +147,6 @@
             document.addEventListener('DOMContentLoaded', inicializarTema);
         } else {
             inicializarTema();
-        }
-
-        // Inicializar versão do app
-        window.addEventListener('DOMContentLoaded', atualizarVersaoApp);
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', atualizarVersaoApp);
-        } else {
-            atualizarVersaoApp();
         }
 
         // Função para buscar plantões do Firestore e formatar para o calendário

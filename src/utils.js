@@ -23,7 +23,7 @@
     const config = global.CONFIG && global.CONFIG.VALORES_POR_LOCAL[local];
     if (!config) return null;
     // Sábado = 6, Domingo = 0
-    return (diaSemana === 6 || diaSemana === 0) ? config.fds : config.semana;
+    return (diaSemana === 0 || diaSemana === 1) ? config.fds : config.semana;
   }
 
   function formatarDataBR(data) {
