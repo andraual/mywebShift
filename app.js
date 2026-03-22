@@ -1,4 +1,4 @@
-        (function() {
+(function() {
         console.log('app.js loaded. window.Utils:', !!window.Utils, 'window.CONFIG:', !!window.CONFIG);
         
         // Instead of destructuring, use window.Utils directly to avoid scope issues
@@ -739,37 +739,51 @@
         // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
         // Função para calcular datas de recorrência
         function calcularDatasRecorrencia() {
-            const dataInicial = new Date(document.getElementById('data').value);
+            const dataValue = document.getElementById('data').value;
+            if (!dataValue) return [];
+
+            // Parse manual para garantir criação em horário local (evita problemas com new Date('YYYY-MM-DD'))
+            const [anoIni, mesIni, diaIni] = dataValue.split('-').map(Number);
+            const dataInicial = new Date(anoIni, mesIni - 1, diaIni);
+
             const tipo = document.getElementById('tipoRecorrencia').value;
             const quantidade = parseInt(document.getElementById('quantidadeRecorrencia').value) || 4;
             const dataFimInput = document.getElementById('dataFim').value;
-            const dataFim = dataFimInput ? new Date(dataFimInput) : null;
+            let dataFim = null;
+            if (dataFimInput) {
+                const [anoF, mesF, diaF] = dataFimInput.split('-').map(Number);
+                dataFim = new Date(anoF, mesF - 1, diaF);
+            }
+
             const hoje = new Date();
             hoje.setHours(0, 0, 0, 0); // Remove horário para comparar apenas datas
             
             const datas = [];
             const diaSemana = dataInicial.getDay(); // 0=Domingo, 1=Segunda, etc.
-            
+
+            // Helper para clonar apenas a parte da data (sem horário)
+            const cloneDateOnly = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
             if (tipo === 'semanal') {
                 // Semanal: toda semana no mesmo dia
-                let dataAtual = new Date(dataInicial);
+                let dataAtual = cloneDateOnly(dataInicial);
                 
                 for (let i = 0; i < quantidade; i++) {
                     if (dataFim && dataAtual > dataFim) break;
                     if (dataAtual >= hoje) {
-                        datas.push(new Date(dataAtual));
+                        datas.push(cloneDateOnly(dataAtual));
                     }
                     dataAtual.setDate(dataAtual.getDate() + 7);
                 }
                 
             } else if (tipo === 'quinzenal') {
                 // Quinzenal: semana sim, semana não (a cada 14 dias)
-                let dataAtual = new Date(dataInicial);
+                let dataAtual = cloneDateOnly(dataInicial);
                 
                 for (let i = 0; i < quantidade; i++) {
                     if (dataFim && dataAtual > dataFim) break;
                     if (dataAtual >= hoje) {
-                        datas.push(new Date(dataAtual));
+                        datas.push(cloneDateOnly(dataAtual));
                     }
                     dataAtual.setDate(dataAtual.getDate() + 14);
                 }
@@ -782,7 +796,7 @@
                 
                 // Primeiro, adiciona a data inicial se for válida
                 if (dataInicial >= hoje) {
-                    datas.push(new Date(dataInicial));
+                    datas.push(cloneDateOnly(dataInicial));
                     plantoesCriados++;
                 }
                 
@@ -809,7 +823,7 @@
                     
                     if (dataFim && dataCalculada > dataFim) break;
                     
-                    datas.push(new Date(dataCalculada));
+                    datas.push(cloneDateOnly(dataCalculada));
                     plantoesCriados++;
                     
                     // Avança para o próximo mês
