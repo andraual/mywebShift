@@ -47,16 +47,5 @@ Controle de plantões médicos com calendário, resumo financeiro e autenticaç�
 - Garanta que `firebase-config.js` seja publicado junto a `index.html`, `styles.css` e `app.js` na raiz pública.
 - Invalide cache/CDN quando trocar credenciais ou versões de JS/CSS.
 
-## Segurança
-- Chaves do Firebase ficam em `firebase-config.js`, fora do repositório.
-- Fluxos ainda usam `innerHTML` em popups; sanitização adicional é recomendada.
-- Firestore deve ter regras de segurança aplicadas ao projeto (não incluídas aqui).
-
-## Roadmap (próximos passos)
-- Quebrar `app.js` em módulos (`modules/auth`, `modules/plantoes`, `modules/financeiro`, `utils`, `config`).
-- Remover handlers inline restantes e usar delegação de eventos.
-- Paginação/otimização de queries do Firestore e cache mais robusto.
-- Pipeline de build (Vite/Webpack), lint e testes.
-
 ## Créditos
 Projeto desenvolvido para gestão de plantões médicos com foco em simplicidade e mobilidade.
