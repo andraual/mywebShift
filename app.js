@@ -23,6 +23,7 @@
             }
             // Carrega consolidado ao entrar na tela
             if (secao === 'consolidado') {
+                setResumoDefaults();
                 carregarConsolidado();
             }
             if (secao === 'inicio') {
@@ -88,8 +89,10 @@
                 // Mostra apenas o botão financeiro para o contador
                 if (isContador) {
                     document.querySelectorAll('.main-btn').forEach(btn => {
-                        if (!btn.title.includes('Financeiro')) {
+                        if (btn.getAttribute('data-section') !== 'resumo') {
                             btn.style.display = 'none';
+                        } else {
+                            btn.style.display = 'flex';
                         }
                     });
                 } else {
@@ -169,15 +172,17 @@
                 snapshot.forEach(doc => {
                     try {
                         const p = doc.data();
+                        const horas = window.Utils.numero(p.tempoPlantao);
                         eventos.push({
                             id: doc.id,
                             title: `Plantão - ${p.local}`,
                             start: `${p.data}T${p.horaInicio}`,
-                            end: moment(`${p.data}T${p.horaInicio}`).add(Number(p.tempoPlantao), 'hours').format('YYYY-MM-DDTHH:mm'),
+                            end: moment(`${p.data}T${p.horaInicio}`).add(horas, 'hours').format('YYYY-MM-DDTHH:mm'),
                             local: p.local,
-                            valorHora: p.valorHora,
-                            horas: p.tempoPlantao,
-                            total: (Number(p.valorHora) * Number(p.tempoPlantao)).toFixed(2),
+                            valorHora: window.Utils.numero(p.valorHora),
+                            horas: horas,
+                            // Prefere valorTotal gravado; senão calcula (tolerante a string/número)
+                            total: (p.valorTotal != null ? window.Utils.numero(p.valorTotal) : (window.Utils.numero(p.valorHora) * horas)).toFixed(2),
                             observacoes: p.observacoes
                         });
                     } catch (erro) {
@@ -269,13 +274,14 @@
                     document.body.appendChild(modal);
                 },
                 eventClick: function(calEvent, jsEvent, view) {
+                    const esc = window.Utils.escaparHtml;
                     const confirmacao = `
                         <div class="popup-content" style="text-align: center;">
-                            <p><strong>Plantão:</strong> ${calEvent.title}</p>
-                            <p><strong>Local:</strong> ${calEvent.local}</p>
-                            <p><strong>Valor por hora:</strong> R$ ${calEvent.valorHora}</p>
-                            <p><strong>Total:</strong> R$ ${calEvent.total}</p>
-                            ${calEvent.observacoes ? `<p><strong>Observações:</strong> ${calEvent.observacoes}</p>` : ''}
+                            <p><strong>Plantão:</strong> ${esc(calEvent.title)}</p>
+                            <p><strong>Local:</strong> ${esc(calEvent.local)}</p>
+                            <p><strong>Valor por hora:</strong> R$ ${window.Utils.numero(calEvent.valorHora).toFixed(2)}</p>
+                            <p><strong>Total:</strong> R$ ${window.Utils.numero(calEvent.total).toFixed(2)}</p>
+                            ${calEvent.observacoes ? `<p><strong>Observações:</strong> ${esc(calEvent.observacoes)}</p>` : ''}
                             <div class="popup-actions">
                                 <button class="popup-btn" onclick="editarPlantao('${calEvent.id}')">✏️ Editar</button>
                                 <button class="popup-btn" onclick="excluirPlantao('${calEvent.id}')">🗑️ Excluir</button>
@@ -364,9 +370,9 @@
                             if (!resumoPorLocal[p.local]) {
                                 resumoPorLocal[p.local] = { horas: 0, valor: 0, plantoes: [] };
                             }
-                            const horas = Number(p.tempoPlantao) || 0;
-                            const valorHora = Number(p.valorHora) || 0;
-                            const valorTotal = p.valorTotal !== undefined ? Number(p.valorTotal) : (horas * valorHora);
+                            const horas = window.Utils.numero(p.tempoPlantao);
+                            const valorHora = window.Utils.numero(p.valorHora);
+                            const valorTotal = (p.valorTotal != null) ? window.Utils.numero(p.valorTotal) : (horas * valorHora);
                             resumoPorLocal[p.local].horas += horas;
                             resumoPorLocal[p.local].valor += valorTotal;
                             resumoPorLocal[p.local].plantoes.push({
@@ -394,7 +400,7 @@
 
                     html += `
                         <div class="summary-item">
-                            <h3>${local}</h3>
+                            <h3>${window.Utils.escaparHtml(local)}</h3>
                             <div class="resumo-wrapper">
                                 <table>
                                     <thead>
@@ -427,9 +433,27 @@
 
                 resumoContent.innerHTML = html;
                 atualizarResumoTotal(resumoPorLocal);
+                // Guarda dados do período atual para exportação (CSV/PDF/ICS)
+                window.__resumoAtual = { mes: parseInt(mes), ano: ano, resumoPorLocal };
             } catch (erro) {
                 console.error('Erro ao filtrar resumo:', erro);
                 mostrarErro('Erro ao carregar resumo financeiro. Tente novamente.');
+            }
+        }
+
+        // Garante/atualiza o perfil em usuarios/{uid} após login (email ou Google)
+        async function garantirPerfil(user) {
+            if (!user) return;
+            try {
+                const nome = user.displayName || user.email || 'Usuário';
+                await db.collection('usuarios').doc(user.uid).set({
+                    nome: nome,
+                    email: user.email || '',
+                    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                    ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            } catch (erro) {
+                console.error('Erro ao garantir perfil do usuário:', erro);
             }
         }
 
@@ -445,7 +469,8 @@
             
             try {
                 console.log('Tentando login com:', email);
-                await auth.signInWithEmailAndPassword(email, senha);
+                const cred = await auth.signInWithEmailAndPassword(email, senha);
+                await garantirPerfil(cred.user);
                 console.log('Login bem-sucedido!');
                 // O onAuthStateChanged já cuida da navegação
             } catch (error) {
@@ -455,12 +480,18 @@
                 let mensagem = 'E-mail ou senha inválidos.';
                 if (error.code === 'auth/user-not-found') {
                     mensagem = 'Usuário não encontrado. Crie uma nova conta.';
-                } else if (error.code === 'auth/wrong-password') {
-                    mensagem = 'Senha incorreta.';
+                } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-login-credentials' || error.code === 'auth/invalid-credential') {
+                    mensagem = 'E-mail ou senha inválidos.';
                 } else if (error.code === 'auth/invalid-email') {
                     mensagem = 'E-mail inválido.';
                 } else if (error.code === 'auth/user-disabled') {
                     mensagem = 'Usuário desabilitado.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    mensagem = 'O login com e-mail/senha não está habilitado no Firebase.';
+                } else if (error.code === 'auth/account-exists-with-different-credential') {
+                    mensagem = 'Já existe uma conta com este e-mail usando outro método de login.';
+                } else if (error.code === 'auth/too-many-requests') {
+                    mensagem = 'Muitas tentativas. Tente mais tarde.';
                 } else {
                     // Exibe código e mensagem para diagnósticos (config/domínios/providers)
                     mensagem = `Erro (${error.code}): ${error.message}`;
@@ -482,7 +513,8 @@
             try {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 console.log('Iniciando login com Google...');
-                await auth.signInWithPopup(provider);
+                const cred = await auth.signInWithPopup(provider);
+                await garantirPerfil(cred.user);
                 console.log('Login com Google bem-sucedido!');
             } catch (error) {
                 console.error('Erro no login com Google:', error.code, error.message);
@@ -491,6 +523,12 @@
                     mensagem = 'Login cancelado.';
                 } else if (error.code === 'auth/network-request-failed') {
                     mensagem = 'Erro de conexão.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    mensagem = 'O login com Google não está habilitado no Firebase.';
+                } else if (error.code === 'auth/account-exists-with-different-credential') {
+                    mensagem = 'Já existe uma conta com este e-mail usando outro método de login. Use a tela de login com e-mail e senha.';
+                } else if (error.code === 'auth/too-many-requests') {
+                    mensagem = 'Muitas tentativas. Tente mais tarde.';
                 } else {
                     mensagem = `Erro (${error.code}): ${error.message}`;
                 }
@@ -550,14 +588,17 @@
                 // Criar usuário
                 const userCredential = await auth.createUserWithEmailAndPassword(email, senha);
                 const user = userCredential.user;
-                
-                // Salvar nome no Firestore
+
+                // Atualiza o nome de exibição para refletir o cadastro
+                try { await user.updateProfile({ displayName: nome }); } catch (e) { /* opcional */ }
+
+                // Salvar nome no Firestore (timestamps do servidor)
                 await db.collection('usuarios').doc(user.uid).set({
                     nome: nome,
                     email: email,
-                    criadoEm: new Date(),
-                    ultimoAcesso: new Date()
-                });
+                    criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                    ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
                 
                 console.log('Conta criada com sucesso!');
                 sucessoDiv.textContent = 'Conta criada com sucesso! Redirecionando...';
@@ -580,8 +621,14 @@
                     mensagem = 'Senha muito fraca.';
                 } else if (error.code === 'auth/network-request-failed') {
                     mensagem = 'Erro de conexão.';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    mensagem = 'O cadastro com e-mail/senha não está habilitado no Firebase.';
+                } else if (error.code === 'auth/account-exists-with-different-credential') {
+                    mensagem = 'Já existe uma conta com este e-mail usando outro método de login.';
+                } else if (error.code === 'auth/too-many-requests') {
+                    mensagem = 'Muitas tentativas. Tente mais tarde.';
                 } else {
-                    mensagem = `Erro (${error.code}): ${error.message}`;
+                    mensagem = `Erro [${error.code}]: ${error.message}`;
                 }
                 
                 erroDiv.textContent = mensagem;
@@ -602,13 +649,14 @@
             document.getElementById('loginEmail').focus();
         }
 
-        // Função para adicionar anos dinamicamente ao select
+        // Função para adicionar anos dinamicamente aos selects (Resumo e Consolidado)
         function adicionarAnoAoResumo(ano) {
-            const anoSelect = document.getElementById('anoResumo');
             const anoString = String(ano);
-            const exists = Array.from(anoSelect.options).some(opt => opt.value === anoString);
-            
-            if (!exists) {
+            ['anoResumo', 'anoConsolidado'].forEach(id => {
+                const anoSelect = document.getElementById(id);
+                if (!anoSelect) return;
+                const exists = Array.from(anoSelect.options).some(opt => opt.value === anoString);
+                if (exists) return;
                 const opt = document.createElement('option');
                 opt.value = anoString;
                 opt.text = anoString;
@@ -617,8 +665,8 @@
                 const opcoes = Array.from(anoSelect.options);
                 opcoes.sort((a, b) => Number(a.value) - Number(b.value));
                 anoSelect.innerHTML = '';
-                opcoes.forEach(opt => anoSelect.appendChild(opt));
-            }
+                opcoes.forEach(o => anoSelect.appendChild(o));
+            });
         }
         
         // Cache simples
@@ -794,8 +842,8 @@
                 let anoAtual = dataInicial.getFullYear();
                 let plantoesCriados = 0;
                 
-                // Primeiro, adiciona a data inicial se for válida
-                if (dataInicial >= hoje) {
+                // Primeiro, adiciona a data inicial se for válida e dentro do limite
+                if (dataInicial >= hoje && (!dataFim || dataInicial <= dataFim)) {
                     datas.push(cloneDateOnly(dataInicial));
                     plantoesCriados++;
                 }
@@ -852,23 +900,23 @@
                 return;
             }            document.getElementById('data').value = plantao.data;
             document.getElementById('horaInicio').value = plantao.horaInicio;
-            document.getElementById('tempoPlantao').value = plantao.tempoPlantao;
+            document.getElementById('tempoPlantao').value = window.Utils.numero(plantao.tempoPlantao);
             document.getElementById('local').value = plantao.local;
-            document.getElementById('valorHora').value = plantao.valorHora;
-            document.getElementById('observacoes').value = plantao.observacoes;
+            document.getElementById('valorHora').value = window.Utils.numero(plantao.valorHora);
+            document.getElementById('observacoes').value = plantao.observacoes || '';
 
             // Carrega valor cheio se existir
-            if (plantao.valorCheio) {
+            if (plantao.valorCheio != null) {
                 document.getElementById('valorCheioCheck').checked = true;
-                document.getElementById('valorCheio').value = plantao.valorCheio;
+                document.getElementById('valorCheio').value = window.Utils.numero(plantao.valorCheio);
                 document.getElementById('valorCheioGroup').style.display = 'block';
                 document.getElementById('valorHora').disabled = true;
             }
 
             // Carrega bônus se existir
-            if (plantao.valorBonus) {
+            if (plantao.valorBonus != null) {
                 document.getElementById('bonusCheck').checked = true;
-                document.getElementById('valorBonus').value = plantao.valorBonus;
+                document.getElementById('valorBonus').value = window.Utils.numero(plantao.valorBonus);
                 document.getElementById('bonusGroup').style.display = 'block';
             }
 
@@ -918,16 +966,16 @@
                 return;
             }
 
-            let valorTotal;
-            let valorHoraFinal = valorHora;
-            let bonusValor = bonusCheck && valorBonus ? Number(valorBonus) : 0;
-
-            if (valorCheioCheck && valorCheio) {
-                valorTotal = Number(valorCheio) + bonusValor;
-                valorHoraFinal = (Number(valorCheio) / Number(tempoPlantao)).toFixed(2);
-            } else {
-                valorTotal = (Number(valorHora) * Number(tempoPlantao)) + bonusValor;
-            }
+            // Cálculo centralizado (mesma regra do app: valorCheio tem prioridade)
+            const bonusValor = bonusCheck && valorBonus ? window.Utils.numero(valorBonus) : 0;
+            const calculo = window.Utils.calcularValorTotal(
+                valorHora,
+                tempoPlantao,
+                valorCheioCheck ? valorCheio : null,
+                bonusValor
+            );
+            let valorHoraFinal = calculo.valorHora;
+            let valorTotal = calculo.valorTotal;
 
             try {                if (plantaoEditandoId) {
                     // Modo edição - não permite recorrência
@@ -965,34 +1013,35 @@
                         const datas = calcularDatasRecorrencia();
                         let plantoesCriados = 0;
                         
+                        const localOption = document.getElementById('local').selectedOptions[0];
+                        const vhFds = localOption ? localOption.dataset.valorHoraFimSemana : undefined;
+
                         for (const dataPlantao of datas) {
                             const dataFormatada = formatarDataISO(dataPlantao);
                             
-                            // Recalcula valor por hora para cada data usando função centralizada
-                            const dataString = dataFormatada;
+                            // Recalcula valor por hora para cada data (regra de fds centralizada)
                             let valorHoraData = valorHoraFinal;
-                            
                             if (!valorCheioCheck) {
-                                const diaSemana = window.Utils.obterDiaSemana(dataString);
-                                const valor = window.Utils.obterValorPorLocal(local, diaSemana);
-                                if (valor !== null) {
-                                    valorHoraData = valor;
-                                }
+                                valorHoraData = window.Utils.calcularValorHoraPara(local, dataFormatada, valorHoraFinal, vhFds);
                             }
-                            
-                            let valorTotalData = valorCheioCheck && valorCheio ? Number(valorCheio) : (Number(valorHoraData) * Number(tempoPlantao));
-                            valorTotalData += bonusValor; // Adiciona o bônus ao valor total
+
+                            const calcData = window.Utils.calcularValorTotal(
+                                valorHoraData,
+                                tempoPlantao,
+                                valorCheioCheck ? valorCheio : null,
+                                bonusValor
+                            );
 
                             const plantao = {
                                 data: dataFormatada,
                                 horaInicio,
                                 tempoPlantao,
                                 local,
-                                valorHora: valorHoraData,
+                                valorHora: calcData.valorHora,
                                 valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
                                 valorBonus: bonusCheck && valorBonus ? Number(valorBonus) : null,
-                                valorTotal: valorTotalData,
-                                observacoes: observacoes + (observacoes ? ' ' : '') + '(Recorrente)',
+                                valorTotal: calcData.valorTotal,
+                                observacoes: [observacoes, '(Recorrente)'].filter(Boolean).join(' '),
                                 userId: user.uid
                             };
 
@@ -1110,7 +1159,7 @@
         // Formata datas para Google Calendar (UTC)
         function formatGoogleDates(plantao) {
             const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
-            const end = new Date(start.getTime() + plantao.tempoPlantao * 60 * 60 * 1000);
+            const end = new Date(start.getTime() + window.Utils.numero(plantao.tempoPlantao) * 60 * 60 * 1000);
             const toGoogle = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
             return { start: toGoogle(start), end: toGoogle(end) };
         }
@@ -1121,35 +1170,56 @@
             if (!p) { alert('Nenhum plantão encontrado para adicionar.'); return; }
             const { start, end } = formatGoogleDates(p);
             const text = encodeURIComponent(`Plantão - ${p.local}`);
-            const details = encodeURIComponent(`Horas: ${p.tempoPlantao}\nValor/hora: R$ ${p.valorHora}${p.observacoes ? `\nObs: ${p.observacoes}` : ''}`);
+            const details = encodeURIComponent(`Horas: ${window.Utils.numero(p.tempoPlantao)}\nValor/hora: R$ ${window.Utils.numero(p.valorHora)}${p.observacoes ? `\nObs: ${p.observacoes}` : ''}`);
             const location = encodeURIComponent(p.local);
             const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}%2F${end}&details=${details}&location=${location}`;
             window.open(url, '_blank');
         };
 
-        // Gera conteúdo ICS
-        function gerarICS(plantao) {
-            const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}@mywebshift`;
+        // Escapa texto para o formato ICS (vírgula, ponto e vírgula, barra e nova linha)
+        function escaparICS(texto) {
+            return String(texto || '')
+                .replace(/\\/g, '\\\\')
+                .replace(/;/g, '\\;')
+                .replace(/,/g, '\\,')
+                .replace(/\r?\n/g, '\\n');
+        }
+
+        // Gera conteúdo ICS para um plantão OU uma lista de plantões (um VEVENT cada)
+        function gerarICSConteudo(entrada) {
+            const lista = Array.isArray(entrada) ? entrada : [entrada];
             const now = new Date();
-            const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
-            const end = new Date(start.getTime() + plantao.tempoPlantao * 60 * 60 * 1000);
             const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-            const lines = [
-                'BEGIN:VCALENDAR',
-                'VERSION:2.0',
-                'PRODID:-//mywebShift//EN',
-                'BEGIN:VEVENT',
-                `UID:${uid}`,
-                `DTSTAMP:${fmt(now)}`,
-                `DTSTART:${fmt(start)}`,
-                `DTEND:${fmt(end)}`,
-                `SUMMARY:Plantão - ${plantao.local}`,
-                `DESCRIPTION:Horas: ${plantao.tempoPlantao}\\nValor/hora: R$ ${plantao.valorHora}${plantao.observacoes ? `\\nObs: ${plantao.observacoes}` : ''}`,
-                `LOCATION:${plantao.local}`,
-                'END:VEVENT',
-                'END:VCALENDAR'
-            ];
+            const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//mywebShift//EN'];
+
+            lista.forEach((plantao, idx) => {
+                if (!plantao || !plantao.data || !plantao.horaInicio) return;
+                const uid = `${Date.now()}-${idx}-${Math.random().toString(36).slice(2)}@mywebshift`;
+                const horas = window.Utils.numero(plantao.tempoPlantao);
+                const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
+                const end = new Date(start.getTime() + horas * 60 * 60 * 1000);
+                const local = plantao.local || 'Plantão';
+                const descricao = `Horas: ${horas}\nValor/hora: R$ ${window.Utils.numero(plantao.valorHora)}${plantao.observacoes ? `\nObs: ${plantao.observacoes}` : ''}`;
+                lines.push(
+                    'BEGIN:VEVENT',
+                    `UID:${uid}`,
+                    `DTSTAMP:${fmt(now)}`,
+                    `DTSTART:${fmt(start)}`,
+                    `DTEND:${fmt(end)}`,
+                    `SUMMARY:${escaparICS('Plantão - ' + local)}`,
+                    `DESCRIPTION:${escaparICS(descricao)}`,
+                    `LOCATION:${escaparICS(local)}`,
+                    'END:VEVENT'
+                );
+            });
+
+            lines.push('END:VCALENDAR');
             return lines.join('\r\n');
+        }
+
+        // Compatibilidade: gera ICS de um único plantão
+        function gerarICS(plantao) {
+            return gerarICSConteudo([plantao]);
         }
 
         // Baixa arquivo .ics
@@ -1157,58 +1227,9 @@
             const p = window.__ultimoPlantaoSalvo;
             if (!p) { alert('Nenhum plantão encontrado para adicionar.'); return; }
             const ics = gerarICS(p);
-            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
             const nome = `plantao_${p.data}_${(p.local || 'local').replace(/\s+/g, '_')}.ics`;
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = nome;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+            window.Utils.baixarArquivo(nome, ics, 'text/calendar;charset=utf-8');
         };
-
-        // Atualize os botões de editar para passar a origem
-        function abrirPopupResumo(plantaoId) {
-            const confirmacao = `
-                <div class="popup-content" style="text-align: center;">
-                    <div class="popup-actions">
-                        <button class="popup-btn" onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
-                        <button class="popup-btn" onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>
-                        <button class="popup-btn" onclick="fecharPopup()">Cancelar</button>
-                    </div>
-                </div>
-            `;
-            const modal = document.createElement('div');
-            modal.style.position = 'fixed';
-            modal.style.top = '50%';
-            modal.style.left = '50%';
-            modal.style.transform = 'translate(-50%, -50%)';
-            modal.style.background = 'white';
-            modal.style.padding = '20px';
-            modal.style.borderRadius = '8px';
-            modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
-            modal.style.zIndex = '9999';
-            modal.innerHTML = confirmacao;
-            modal.style.width = 'calc(100vw - 40px)';
-            modal.style.maxWidth = '520px';
-
-            modal.id = 'popupModal';
-            
-            // Adiciona backdrop e fecha ao clicar fora
-            const backdrop = document.createElement('div');
-            backdrop.id = 'popupBackdrop';
-            backdrop.style.position = 'fixed';
-            backdrop.style.top = '0';
-            backdrop.style.left = '0';
-            backdrop.style.width = '100%';
-            backdrop.style.height = '100%';
-            backdrop.style.background = 'rgba(0,0,0,0.5)';
-            backdrop.style.zIndex = '9998';
-            backdrop.onclick = fecharPopup;
-            document.body.appendChild(backdrop);
-            document.body.appendChild(modal);
-        }
 
         // Função para fechar o popup
         function fecharPopup() {
@@ -1300,7 +1321,8 @@ function atualizarInfoRecorrencia() {
         return;
     }
     
-    const dataInicial = new Date(data);
+    const [anoI, mesI, diaI] = data.split('-').map(Number);
+    const dataInicial = new Date(anoI, mesI - 1, diaI); // horário local (evita fuso)
     const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const posicoes = ['', '1ª', '2ª', '3ª', '4ª', '5ª'];
     let texto = '<strong>📅 Plantão Recorrente:</strong> ';
@@ -1315,7 +1337,8 @@ function atualizarInfoRecorrencia() {
     }
       const datasCalculadas = calcularDatasRecorrencia();
       if (dataFim) {
-        const dataLimite = new Date(dataFim);
+        const [anoF2, mesF2, diaF2] = dataFim.split('-').map(Number);
+        const dataLimite = new Date(anoF2, mesF2 - 1, diaF2); // horário local
         texto += ` até ${window.Utils.formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
     } else if (quantidade) {
         if (datasCalculadas.length > 0) {
@@ -1362,13 +1385,13 @@ function setResumoDefaults() {
     const ano = String(now.getFullYear());
 
     const mesSelect = document.getElementById('mesResumo');
-    const anoSelect = document.getElementById('anoResumo');
-
     if (mesSelect) {
         mesSelect.value = mes;
     }
-    if (anoSelect) {
-        // adiciona o ano nas options caso não exista (ex.: ano futuro)
+    // Pré-seleciona o ano atual nos dois selects (Resumo e Consolidado)
+    ['anoResumo', 'anoConsolidado'].forEach(id => {
+        const anoSelect = document.getElementById(id);
+        if (!anoSelect) return;
         const exists = Array.from(anoSelect.options).some(opt => opt.value === ano);
         if (!exists) {
             const opt = document.createElement('option');
@@ -1377,7 +1400,7 @@ function setResumoDefaults() {
             anoSelect.appendChild(opt);
         }
         anoSelect.value = ano;
-    }
+    });
 }
 
 /* --- Adicionado: função para atualizar o resumo total --- */
@@ -1407,16 +1430,17 @@ async function abrirPopupResumo(plantaoId) {
 
         const user = firebase.auth().currentUser;
         const isContador = user.email === 'contador@contador.com';
+        const esc = window.Utils.escaparHtml;
 
         const confirmacao = `
             <div style="text-align: center;">
-                <p><strong>Data:</strong> ${plantao.data.split('-').reverse().join('/')}</p>
-                <p><strong>Local:</strong> ${plantao.local}</p>
-                <p><strong>Valor por Hora:</strong> R$ ${plantao.valorHora}</p>
-                <p><strong>Valor Total:</strong> R$ ${plantao.valorTotal}</p>
-                <p><strong>Observações:</strong> ${plantao.observacoes || 'Nenhuma'}</p>
-                <button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
-                ${!isContador ? `<button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>` : ''}
+                <p><strong>Data:</strong> ${esc(plantao.data.split('-').reverse().join('/'))}</p>
+                <p><strong>Local:</strong> ${esc(plantao.local)}</p>
+                <p><strong>Valor por Hora:</strong> ${window.Utils.toBRL(plantao.valorHora)}</p>
+                <p><strong>Valor Total:</strong> ${window.Utils.toBRL(plantao.valorTotal)}</p>
+                <p><strong>Observações:</strong> ${esc(plantao.observacoes || 'Nenhuma')}</p>
+                ${!isContador ? `<button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
+                <button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>` : ''}
                 <button onclick="fecharPopup()">Cancelar</button>
             </div>
         `;
@@ -1487,8 +1511,8 @@ async function carregarConsolidado() {
                 const mesStr = p.data.substring(5, 7);
                 const mes = parseInt(mesStr);
                 const local = p.local || 'Sem local';
-                const horas = Number(p.tempoPlantao) || 0;
-                const valorTotal = p.valorTotal !== undefined ? Number(p.valorTotal) : 0;
+                const horas = window.Utils.numero(p.tempoPlantao);
+                const valorTotal = p.valorTotal != null ? window.Utils.numero(p.valorTotal) : 0;
                 
                 // Agregação por mês
                 if (!meses[mes]) {
@@ -1517,7 +1541,10 @@ async function carregarConsolidado() {
         });
         
         const mediaHora = totalHoras > 0 ? (totalValor / totalHoras).toFixed(2) : '0.00';
-        
+
+        // Guarda dados do ano atual para exportação (CSV/PDF)
+        window.__consolidadoAtual = { ano, meses, unidades, totalHoras, totalValor, totalPlantoes, mediaHora };
+
         // Atualizar resumo total
         document.getElementById('consolidadoTotalHoras').textContent = totalHoras.toFixed(1);
         document.getElementById('consolidadoTotalValor').textContent = totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
@@ -1548,7 +1575,7 @@ function renderizarTabelaUnidades(unidades) {
         const mediaHora = u.horas > 0 ? (u.valor / u.horas).toFixed(2) : '0.00';
         html += `
             <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 12px; text-align: left;">${unidade}</td>
+                <td style="padding: 12px; text-align: left;">${window.Utils.escaparHtml(unidade)}</td>
                 <td style="padding: 12px; text-align: center;">${u.plantoes}</td>
                 <td style="padding: 12px; text-align: center;">${u.horas.toFixed(1)}</td>
                 <td style="padding: 12px; text-align: right;">R$ ${u.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -1743,6 +1770,116 @@ function renderizarGraficos(meses, unidades) {
             mostrarSecao('cadastro');
         }
         
+        /* ==================== EXPORTAÇÃO (CSV / PDF / ICS) ==================== */
+
+        // Exibe/oculta o menu de exportação
+        window.toggleExportMenu = function(id) {
+            const menu = document.getElementById(id);
+            if (!menu) return;
+            const aberto = menu.classList.contains('show');
+            document.querySelectorAll('.export-menu.show').forEach(m => m.classList.remove('show'));
+            if (!aberto) menu.classList.add('show');
+        };
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.export-dropdown')) {
+                document.querySelectorAll('.export-menu.show').forEach(m => m.classList.remove('show'));
+            }
+        });
+
+        // Formata número para CSV pt-BR (vírgula decimal)
+        function csvNumero(n, casas) {
+            const c = (casas === undefined) ? 2 : casas;
+            return window.Utils.numero(n).toFixed(c).replace('.', ',');
+        }
+
+        // Impressão (PDF) isolando a seção ativa
+        function imprimirSecao(id, titulo, periodo) {
+            const secao = document.getElementById(id);
+            if (!secao) return;
+            const header = document.createElement('div');
+            header.className = 'print-header';
+            header.innerHTML = `<h1>${window.Utils.escaparHtml(titulo)}</h1><p>${window.Utils.escaparHtml(periodo || '')}</p>`;
+            secao.insertBefore(header, secao.firstChild);
+            document.body.classList.add('printing');
+            document.body.setAttribute('data-print', id);
+            const limpar = () => {
+                document.body.classList.remove('printing');
+                document.body.removeAttribute('data-print');
+                if (header.parentNode) header.parentNode.removeChild(header);
+                window.removeEventListener('afterprint', limpar);
+            };
+            window.addEventListener('afterprint', limpar);
+            window.print();
+            setTimeout(limpar, 1500);
+        }
+
+        // --- Resumo: CSV por unidade ---
+        window.exportarResumoCSV = function() {
+            const dados = window.__resumoAtual;
+            if (!dados) { alert('Carregue o resumo antes de exportar.'); return; }
+            const linhas = [];
+            linhas.push('Unidade;Plantões;Horas;Valor/Hora Médio;Valor Total');
+            let totPlant = 0, totHoras = 0, totValor = 0;
+            Object.keys(dados.resumoPorLocal).sort().forEach(local => {
+                const r = dados.resumoPorLocal[local];
+                const media = r.horas > 0 ? (r.valor / r.horas) : 0;
+                linhas.push(`${local};${r.plantoes.length};${csvNumero(r.horas, 1)};${csvNumero(media)};${csvNumero(r.valor)}`);
+                totPlant += r.plantoes.length;
+                totHoras += r.horas;
+                totValor += r.valor;
+            });
+            const mediaGeral = totHoras > 0 ? (totValor / totHoras) : 0;
+            linhas.push(`TOTAL;${totPlant};${csvNumero(totHoras, 1)};${csvNumero(mediaGeral)};${csvNumero(totValor)}`);
+            const csv = '\uFEFF' + linhas.join('\r\n');
+            const nome = `resumo_${dados.ano}-${String(dados.mes).padStart(2, '0')}.csv`;
+            window.Utils.baixarArquivo(nome, csv, 'text/csv;charset=utf-8');
+        };
+
+        // --- Resumo: ICS do mês (todos os plantões do filtro) ---
+        window.exportarResumoICS = function() {
+            const dados = window.__resumoAtual;
+            if (!dados) { alert('Carregue o resumo antes de exportar.'); return; }
+            const lista = [];
+            Object.keys(dados.resumoPorLocal).forEach(local => {
+                dados.resumoPorLocal[local].plantoes.forEach(p => lista.push(p));
+            });
+            if (lista.length === 0) { alert('Nenhum plantão para exportar no período.'); return; }
+            const ics = gerarICSConteudo(lista);
+            const nome = `plantoes_${dados.ano}-${String(dados.mes).padStart(2, '0')}.ics`;
+            window.Utils.baixarArquivo(nome, ics, 'text/calendar;charset=utf-8');
+        };
+
+        // --- Resumo: PDF via window.print ---
+        window.exportarResumoPDF = function() {
+            const dados = window.__resumoAtual;
+            const periodo = dados ? `${String(dados.mes).padStart(2, '0')}/${dados.ano}` : '';
+            imprimirSecao('resumo', 'Resumo Financeiro Mensal', periodo);
+        };
+
+        // --- Consolidado: CSV (evolução mensal + total do ano) ---
+        window.exportarConsolidadoCSV = function() {
+            const dados = window.__consolidadoAtual;
+            if (!dados) { alert('Carregue o consolidado antes de exportar.'); return; }
+            const nomes = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            const linhas = [];
+            linhas.push('Mês;Plantões;Horas;Valor Total;Valor/Hora Médio');
+            for (let m = 1; m <= 12; m++) {
+                if (!dados.meses[m]) continue;
+                const mes = dados.meses[m];
+                const media = mes.horas > 0 ? (mes.valor / mes.horas) : 0;
+                linhas.push(`${nomes[m]};${mes.plantoes};${csvNumero(mes.horas, 1)};${csvNumero(mes.valor)};${csvNumero(media)}`);
+            }
+            linhas.push(`TOTAL;${dados.totalPlantoes};${csvNumero(dados.totalHoras, 1)};${csvNumero(dados.totalValor)};${csvNumero(dados.mediaHora)}`);
+            const csv = '\uFEFF' + linhas.join('\r\n');
+            window.Utils.baixarArquivo(`consolidado_${dados.ano}.csv`, csv, 'text/csv;charset=utf-8');
+        };
+
+        // --- Consolidado: PDF via window.print ---
+        window.exportarConsolidadoPDF = function() {
+            const dados = window.__consolidadoAtual;
+            imprimirSecao('consolidado', 'Consolidado Anual', dados ? String(dados.ano) : '');
+        };
+
         // Expose functions to window for onclick handlers in HTML
         window.mostrarSecao = mostrarSecao;
         window.filtrarResumo = filtrarResumo;

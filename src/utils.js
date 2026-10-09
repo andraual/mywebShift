@@ -76,12 +76,91 @@
     return null;
   }
 
+  function numero(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    const n = Number(v);
+    return isNaN(n) ? 0 : n;
+  }
+
+  function toBRL(n) {
+    return numero(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function calcularValorTotal(valorHora, tempoPlantao, valorCheio, bonus) {
+    const vh = numero(valorHora);
+    const tempo = numero(tempoPlantao);
+    const bonusN = numero(bonus);
+    const cheio = valorCheio !== null && valorCheio !== undefined && valorCheio !== '';
+    if (cheio) {
+      const vCheio = numero(valorCheio);
+      const vhCalc = tempo > 0 ? (vCheio / tempo) : vh;
+      return {
+        valorHora: vhCalc,
+        valorTotal: vCheio + bonusN
+      };
+    }
+    return {
+      valorHora: vh,
+      valorTotal: (vh * tempo) + bonusN
+    };
+  }
+
+  // Regra centralizada do valor/hora considerando final de semana.
+  // valorHoraFimSemana (da unidade) tem prioridade; senão usa VALORES_POR_LOCAL.
+  function calcularValorHoraPara(local, dataString, valorHora, valorHoraFimSemana) {
+    const vh = numero(valorHora);
+    if (!dataString) return vh;
+
+    const diaSemana = obterDiaSemana(dataString);
+    const isFds = diaSemana === 0 || diaSemana === 6;
+
+    if (valorHoraFimSemana !== null && valorHoraFimSemana !== undefined && valorHoraFimSemana !== '') {
+      return isFds ? numero(valorHoraFimSemana) : vh;
+    }
+
+    const valorConfig = obterValorPorLocal(local, diaSemana);
+    if (valorConfig !== null && valorConfig !== undefined) {
+      return numero(valorConfig);
+    }
+
+    return vh;
+  }
+
+  // Escapa texto para uso seguro em innerHTML (nome de local, observações etc.)
+  function escaparHtml(texto) {
+    if (texto === null || texto === undefined) return '';
+    return String(texto)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Gera e dispara o download de um arquivo via Blob + <a download>
+  function baixarArquivo(nome, conteudo, tipo) {
+    const blob = new Blob([conteudo], { type: tipo || 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+  }
+
   global.Utils = {
     debounce,
     obterDiaSemana,
     obterValorPorLocal,
     formatarDataBR,
     obterPosicaoSemanaNoMes,
-    obterDataPorPosicaoSemana
+    obterDataPorPosicaoSemana,
+    numero,
+    toBRL,
+    calcularValorTotal,
+    calcularValorHoraPara,
+    escaparHtml,
+    baixarArquivo
   };
 })(window);

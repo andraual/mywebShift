@@ -196,22 +196,25 @@
                     return;
                 }
                 
+                // Escapa texto para HTML (nome digitado pelo usuário)
+                const esc = (window.Utils && window.Utils.escaparHtml) ? window.Utils.escaparHtml : (t) => String(t == null ? '' : t);
+
                 let html = '';
                 docs.forEach(data => {
                     const temFimSemana = data.valorHoraFimSemana ? true : false;
                     const infoValor = temFimSemana 
-                        ? `Dia útil: R$ ${data.valorHora.toFixed(2)}/h | Fim de semana: R$ ${data.valorHoraFimSemana.toFixed(2)}/h`
-                        : `R$ ${data.valorHora.toFixed(2)}/hora`;
+                        ? `Dia útil: R$ ${Number(data.valorHora).toFixed(2)}/h | Fim de semana: R$ ${Number(data.valorHoraFimSemana).toFixed(2)}/h`
+                        : `R$ ${Number(data.valorHora).toFixed(2)}/hora`;
                     
                     html += `
                         <div class="unidade-item">
                             <div class="unidade-info">
-                                <h4>${data.nome}</h4>
+                                <h4>${esc(data.nome)}</h4>
                                 <p>${infoValor}</p>
                             </div>
                             <div class="unidade-acoes">
                                 <button class="btn-editar" onclick="abrirModalUnidade('${data.id}')">Editar</button>
-                                <button class="btn-excluir" onclick="excluirUnidade('${data.id}', '${data.nome}')">Excluir</button>
+                                <button class="btn-excluir" data-id="${data.id}" data-nome="${esc(data.nome)}" onclick="excluirUnidade(this.dataset.id, this.dataset.nome)">Excluir</button>
                             </div>
                         </div>
                     `;
@@ -251,9 +254,9 @@
                     option.dataset.valorHora = data.valorHora;
                     if (data.valorHoraFimSemana) {
                         option.dataset.valorHoraFimSemana = data.valorHoraFimSemana;
-                        option.textContent = `${data.nome} (Útil: R$ ${data.valorHora.toFixed(2)}/h | FDS: R$ ${data.valorHoraFimSemana.toFixed(2)}/h)`;
+                        option.textContent = `${data.nome} (Útil: R$ ${Number(data.valorHora).toFixed(2)}/h | FDS: R$ ${Number(data.valorHoraFimSemana).toFixed(2)}/h)`;
                     } else {
-                        option.textContent = `${data.nome} - R$ ${data.valorHora.toFixed(2)}/h`;
+                        option.textContent = `${data.nome} - R$ ${Number(data.valorHora).toFixed(2)}/h`;
                     }
                     
                     select.appendChild(option);
