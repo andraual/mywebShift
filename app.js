@@ -1,5 +1,9 @@
 (function() {
         console.log('app.js loaded. window.Utils:', !!window.Utils, 'window.CONFIG:', !!window.CONFIG);
+
+        const MESES_PT = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        let resumoMes = new Date().getMonth() + 1;
+        let resumoAno = new Date().getFullYear();
         
         // Instead of destructuring, use window.Utils directly to avoid scope issues
         // This way, the functions are always accessed from the global namespace
@@ -279,6 +283,8 @@
                         <div class="popup-content" style="text-align: center;">
                             <p><strong>Plantão:</strong> ${esc(calEvent.title)}</p>
                             <p><strong>Local:</strong> ${esc(calEvent.local)}</p>
+                            <p><strong>Hora de início:</strong> ${esc(calEvent.horaInicio || '—')}</p>
+                            <p><strong>Horas trabalhadas:</strong> ${window.Utils.numero(calEvent.horas)} h</p>
                             <p><strong>Valor por hora:</strong> R$ ${window.Utils.numero(calEvent.valorHora).toFixed(2)}</p>
                             <p><strong>Total:</strong> R$ ${window.Utils.numero(calEvent.total).toFixed(2)}</p>
                             ${calEvent.observacoes ? `<p><strong>Observações:</strong> ${esc(calEvent.observacoes)}</p>` : ''}
@@ -350,8 +356,8 @@
         // Função para filtrar o resumo financeiro
         async function filtrarResumo() {
             try {
-                const mes = document.getElementById('mesResumo').value.padStart(2, '0');
-                const ano = document.getElementById('anoResumo').value;
+                const mes = String(resumoMes).padStart(2, '0');
+                const ano = String(resumoAno);
                 const resumoContent = document.getElementById('resumoContent');
                 const user = firebase.auth().currentUser;
                 
@@ -382,7 +388,8 @@
                                 tempoPlantao: horas,
                                 valorHora: valorHora,
                                 valorTotal: valorTotal,
-                                local: p.local,
+local: p.local,
+                            horaInicio: p.horaInicio || '',
                                 observacoes: p.observacoes || ''
                             });
                         }
@@ -1379,19 +1386,34 @@ document.getElementById('tempoPlantao').addEventListener('input', function() {
 });
 
 // adiciona esta função no mesmo <script> (logo após mostrarSecao ou onde ficar melhor)
+function atualizarLabelResumo() {
+    const el = document.getElementById('mesResumoLabel');
+    if (el) el.innerHTML = window.Utils.escaparHtml(`${MESES_PT[resumoMes - 1]} ${resumoAno}`);
+}
+
+function navegarResumo(delta) {
+    resumoMes += delta;
+    if (resumoMes > 12) {
+        resumoMes = 1;
+        resumoAno++;
+    } else if (resumoMes < 1) {
+        resumoMes = 12;
+        resumoAno--;
+    }
+    atualizarLabelResumo();
+    filtrarResumo();
+}
+
 function setResumoDefaults() {
     const now = new Date();
-    const mes = String(now.getMonth() + 1); // valores das options: "1".."12"
-    const ano = String(now.getFullYear());
+    resumoMes = now.getMonth() + 1;
+    resumoAno = now.getFullYear();
+    atualizarLabelResumo();
 
-    const mesSelect = document.getElementById('mesResumo');
-    if (mesSelect) {
-        mesSelect.value = mes;
-    }
-    // Pré-seleciona o ano atual nos dois selects (Resumo e Consolidado)
-    ['anoResumo', 'anoConsolidado'].forEach(id => {
-        const anoSelect = document.getElementById(id);
-        if (!anoSelect) return;
+    // Pré-seleciona o ano atual no select do Consolidado
+    const anoSelect = document.getElementById('anoConsolidado');
+    if (anoSelect) {
+        const ano = String(resumoAno);
         const exists = Array.from(anoSelect.options).some(opt => opt.value === ano);
         if (!exists) {
             const opt = document.createElement('option');
@@ -1400,7 +1422,7 @@ function setResumoDefaults() {
             anoSelect.appendChild(opt);
         }
         anoSelect.value = ano;
-    });
+    }
 }
 
 /* --- Adicionado: função para atualizar o resumo total --- */
@@ -1883,6 +1905,8 @@ function renderizarGraficos(meses, unidades) {
         // Expose functions to window for onclick handlers in HTML
         window.mostrarSecao = mostrarSecao;
         window.filtrarResumo = filtrarResumo;
+        window.navegarResumo = navegarResumo;
+        window.setResumoDefaults = setResumoDefaults;
         window.fecharPopup = fecharPopup;
         window.editarPlantao = editarPlantao;
         window.excluirPlantao = excluirPlantao;

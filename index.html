@@ -267,33 +267,12 @@
             <button onclick="mostrarSecao('inicio')" style="margin-bottom:20px;">&larr; Voltar</button>
             <h2>Resumo Financeiro Mensal</h2>
             <div class="summary-header">
-                <div class="form-group">
-                    <label for="mesResumo">Selecione o Mês:</label>
-                    <select id="mesResumo">
-                        <option value="1">Janeiro</option>
-                        <option value="2">Fevereiro</option>
-                        <option value="3">Março</option>
-                        <option value="4">Abril</option>
-                        <option value="5">Maio</option>
-                        <option value="6">Junho</option>
-                        <option value="7">Julho</option>
-                        <option value="8">Agosto</option>
-                        <option value="9">Setembro</option>
-                        <option value="10">Outubro</option>
-                        <option value="11">Novembro</option>
-                        <option value="12">Dezembro</option>
-                    </select>
+                <div class="summary-nav">
+                    <button type="button" class="nav-arrow" onclick="navegarResumo(-1)" aria-label="Mês anterior">&#9664;</button>
+                    <span id="mesResumoLabel" class="summary-nav-label">&mdash;</span>
+                    <button type="button" class="nav-arrow" onclick="navegarResumo(1)" aria-label="Próximo mês">&#9654;</button>
+                    <button type="button" class="nav-today" onclick="setResumoDefaults(); filtrarResumo();">Hoje</button>
                 </div>
-                <div class="form-group">
-                    <label for="anoResumo">Ano:</label>
-                    <select id="anoResumo">
-                        <option value="2023">2023</option>
-                        <option value="2024" selected>2024</option>
-                        <option value="2025">2025</option>
-                        <option value="2026">2026</option>
-                    </select>
-                </div>
-                <button onclick="filtrarResumo()">Filtrar</button>
                 <div class="export-dropdown">
                     <button type="button" onclick="toggleExportMenu('exportResumoMenu')">⬇️ Exportar</button>
                     <div id="exportResumoMenu" class="export-menu">
