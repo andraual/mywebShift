@@ -1878,6 +1878,148 @@ function renderizarGraficos(meses, unidades) {
             imprimirSecao('resumo', 'Resumo Financeiro Mensal', periodo);
         };
 
+        // --- Resumo: copiar a linha do mês exibido para o Excel (colunas separadas por TAB) ---
+        // Ordem das colunas exigida pelo arquivo do Excel: safra + unidades
+        const COLUNAS_COPIA_RESUMO = [
+            'Consultas',
+            'Beneficência Portuguesa SC',
+            'Intermedica Diadema',
+            'H. São Cristovão da Gama',
+            'H. São Cristovão'
+        ];
+
+        // Normaliza nomes de unidade (acentos, caixa, pontuação, abreviações) para comparação
+        function normalizarNomeUnidade(nome) {
+            return String(nome || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/christovao/g, 'cristovao')
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\bh\b/g, 'hospital')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // Pontua a aderência entre a coluna pedida e uma unidade existente no resumo
+        function pontuarUnidade(colunaNorm, unidadeNorm) {
+            const tokensUnidade = unidadeNorm.split(' ');
+            let comuns = 0;
+            let ausentes = 0;
+            colunaNorm.split(' ').forEach(token => {
+                if (tokensUnidade.indexOf(token) !== -1) comuns++;
+                else ausentes++;
+            });
+            return comuns - ausentes;
+        }
+
+        // Mapeia cada coluna para a unidade exibida na tela (sem reaproveitar a mesma unidade)
+        function mapearColunasParaUnidades(resumoPorLocal) {
+            const unidades = Object.keys(resumoPorLocal || {});
+            const candidatos = [];
+            COLUNAS_COPIA_RESUMO.forEach((coluna, indiceColuna) => {
+                const colunaNorm = normalizarNomeUnidade(coluna);
+                unidades.forEach(unidade => {
+                    const unidadeNorm = normalizarNomeUnidade(unidade);
+                    let pontos;
+                    if (unidade === coluna) {
+                        pontos = 1000;                                  // nome exato
+                    } else if (unidadeNorm === colunaNorm) {
+                        pontos = 900;                                   // mesmo nome normalizado
+                    } else if (unidadeNorm.indexOf(colunaNorm) === 0) {
+                        pontos = 800;                                   // abreviação ("H. ..." -> "Hospital ...")
+                    } else {
+                        pontos = pontuarUnidade(colunaNorm, unidadeNorm);
+                        if (pontos <= 0) return;
+                    }
+                    candidatos.push({ indiceColuna, unidade, pontos });
+                });
+            });
+
+            candidatos.sort((a, b) => b.pontos - a.pontos);
+            const mapa = {};
+            const usadas = new Set();
+            candidatos.forEach(c => {
+                if (mapa[c.indiceColuna] != null || usadas.has(c.unidade)) return;
+                mapa[c.indiceColuna] = c.unidade;
+                usadas.add(c.unidade);
+            });
+            return mapa;
+        }
+
+        // Monta a linha do mês vigente: safra (AAAAMM) + valores (pt-BR) separados por TAB
+        function montarLinhaMesResumo() {
+            const dados = window.__resumoAtual;
+            const mapa = mapearColunasParaUnidades(dados.resumoPorLocal);
+            const safra = `${dados.ano}${String(dados.mes).padStart(2, '0')}`;
+            const valores = COLUNAS_COPIA_RESUMO.map((coluna, indice) => {
+                const unidade = mapa[indice];
+                const resumo = unidade ? dados.resumoPorLocal[unidade] : null;
+                return csvNumero(resumo ? resumo.valor : 0);
+            });
+            return [safra].concat(valores).join('\t') + '\n';
+        }
+
+        // Feedback discreto ao lado do botão (sucesso e erro)
+        function feedbackCopiarLinha(mensagem, tipo) {
+            const el = document.getElementById('copiarLinhaStatus');
+            if (!el) return;
+            el.textContent = mensagem;
+            el.classList.toggle('erro', tipo === 'erro');
+            clearTimeout(el.timeoutCopiar);
+            el.timeoutCopiar = setTimeout(() => {
+                el.textContent = '';
+                el.classList.remove('erro');
+            }, 4000);
+        }
+
+        // Clipboard API com fallback para navegadores/permissões restritivos
+        async function copiarParaAreaTransferencia(texto) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(texto);
+                    return true;
+                } catch (erro) {
+                    console.warn('Falha na Clipboard API, tentando alternativa:', erro);
+                }
+            }
+            try {
+                const area = document.createElement('textarea');
+                area.value = texto;
+                area.setAttribute('readonly', '');
+                area.style.position = 'fixed';
+                area.style.top = '-1000px';
+                document.body.appendChild(area);
+                area.select();
+                const copiado = document.execCommand('copy');
+                document.body.removeChild(area);
+                return copiado;
+            } catch (erro) {
+                console.error('Erro ao copiar para a área de transferência:', erro);
+                return false;
+            }
+        }
+
+        // Copia apenas a linha do mês exibido na tela Financeiro
+        async function copiarLinhaResumo() {
+            try {
+                const dados = window.__resumoAtual;
+                if (!dados || !dados.resumoPorLocal || Object.keys(dados.resumoPorLocal).length === 0) {
+                    feedbackCopiarLinha('Nenhum dado para copiar no período exibido.', 'erro');
+                    return;
+                }
+                const copiado = await copiarParaAreaTransferencia(montarLinhaMesResumo());
+                if (copiado) {
+                    feedbackCopiarLinha('Linha do mês copiada!');
+                } else {
+                    feedbackCopiarLinha('Não foi possível copiar. Verifique as permissões do navegador.', 'erro');
+                }
+            } catch (erro) {
+                console.error('Erro ao copiar linha do resumo:', erro);
+                feedbackCopiarLinha('Erro ao copiar a linha do mês.', 'erro');
+            }
+        }
+
         // --- Consolidado: CSV (evolução mensal + total do ano) ---
         window.exportarConsolidadoCSV = function() {
             const dados = window.__consolidadoAtual;
@@ -1907,6 +2049,7 @@ function renderizarGraficos(meses, unidades) {
         window.filtrarResumo = filtrarResumo;
         window.navegarResumo = navegarResumo;
         window.setResumoDefaults = setResumoDefaults;
+        window.copiarLinhaResumo = copiarLinhaResumo;
         window.fecharPopup = fecharPopup;
         window.editarPlantao = editarPlantao;
         window.excluirPlantao = excluirPlantao;

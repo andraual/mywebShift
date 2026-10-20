@@ -1584,6 +1584,28 @@
     body.dark-theme .export-menu button { color: #e0e0e0; }
     body.dark-theme .export-menu button:hover { background: rgba(255,77,148,0.15); }
 
+    /* --- Copiar linha do mês (Financeiro) para o Excel --- */
+    .summary-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .summary-actions .export-dropdown { flex: 0 0 auto; }
+    .copy-status {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary);
+        white-space: nowrap;
+    }
+    .copy-status.erro { color: #d32f2f; }
+    .copy-status:empty { display: none; }
+    body.dark-theme .copy-status.erro { color: #ff8080; }
+    @media (max-width: 768px) {
+        .summary-actions { width: 100%; justify-content: center; }
+        .copy-status { white-space: normal; }
+    }
+
     /* Header de impressão (só aparece no PDF) */
     .print-header { display: none; }
 
@@ -1608,6 +1630,7 @@
         body.printing .print-header p { margin: 0; color: #666; }
         body.printing button,
         body.printing .export-dropdown,
+        body.printing .summary-actions,
         body.printing .logout-btn { display: none !important; }
         body.printing .consolidado-wrapper,
         body.printing .resumo-wrapper { overflow: visible !important; }

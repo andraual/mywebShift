@@ -273,13 +273,17 @@
                     <button type="button" class="nav-arrow" onclick="navegarResumo(1)" aria-label="Próximo mês">&#9654;</button>
                     <button type="button" class="nav-today" onclick="setResumoDefaults(); filtrarResumo();">Hoje</button>
                 </div>
-                <div class="export-dropdown">
-                    <button type="button" onclick="toggleExportMenu('exportResumoMenu')">⬇️ Exportar</button>
-                    <div id="exportResumoMenu" class="export-menu">
-                        <button type="button" onclick="exportarResumoCSV(); toggleExportMenu('exportResumoMenu');">CSV (Excel)</button>
-                        <button type="button" onclick="exportarResumoPDF(); toggleExportMenu('exportResumoMenu');">PDF</button>
-                        <button type="button" onclick="exportarResumoICS(); toggleExportMenu('exportResumoMenu');">ICS (Agenda)</button>
+                <div class="summary-actions">
+                    <div class="export-dropdown">
+                        <button type="button" onclick="toggleExportMenu('exportResumoMenu')">⬇️ Exportar</button>
+                        <div id="exportResumoMenu" class="export-menu">
+                            <button type="button" onclick="exportarResumoCSV(); toggleExportMenu('exportResumoMenu');">CSV (Excel)</button>
+                            <button type="button" onclick="exportarResumoPDF(); toggleExportMenu('exportResumoMenu');">PDF</button>
+                            <button type="button" onclick="exportarResumoICS(); toggleExportMenu('exportResumoMenu');">ICS (Agenda)</button>
+                        </div>
                     </div>
+                    <button type="button" id="btnCopiarLinhaResumo" onclick="copiarLinhaResumo()" title="Copiar a linha do mês exibido para o Excel" aria-label="Copiar a linha do mês exibido para o Excel">📋</button>
+                    <span id="copiarLinhaStatus" class="copy-status" role="status" aria-live="polite"></span>
                 </div>
                 <button onclick="mostrarSecao('consolidado')" style="background: #4CAF50; margin-left: auto;">📊 Consolidado</button>
             </div>
