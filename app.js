@@ -251,6 +251,7 @@
             // Inicializa o calendário com altura responsiva
             $('#calendar').fullCalendar({
                 locale: 'pt-br',
+                firstDay: 1,
                 header: {
                     left: 'prev,next today',
                     center: 'title',
