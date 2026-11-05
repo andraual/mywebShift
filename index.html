@@ -169,6 +169,16 @@
                     </span>
                     <span>Unidades</span>
                 </button>
+
+                <button class="main-btn" data-section="fiscal" onclick="mostrarSecao('fiscal')" title="Configuração Fiscal NFS-e">
+                    <span class="main-btn-icon">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 3h9l4 4v14H6z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" fill="rgba(255,255,255,0.12)"/>
+                            <path d="M9 10h7M9 13h7M9 16h4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </span>
+                    <span>Fiscal</span>
+                </button>
             </div>
             <div class="home-actions">
                 <div class="theme-selector">
@@ -228,7 +238,8 @@
                     <input type="checkbox" id="recorrenteCheck" style="width:auto;">
                     <label for="recorrenteCheck" style="margin:0;">Plantão recorrente</label>
                 </div>
-                <div id="recorrenciaGroup" style="display:none; grid-column: 1 / -1;">                    <div class="form-group">
+                <div id="recorrenciaGroup" style="display:none; grid-column: 1 / -1;">
+                    <div class="form-group">
                         <label for="tipoRecorrencia">Tipo de Recorrência:</label>
                         <select id="tipoRecorrencia">
                             <option value="semanal">Semanal (toda semana no mesmo dia)</option>
@@ -237,12 +248,21 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="quantidadeRecorrencia">Quantas vezes repetir:</label>
-                        <input type="number" id="quantidadeRecorrencia" min="1" max="52" value="4" placeholder="Ex: 4 (criará 4 plantões)">
+                        <label>Término da recorrência:</label>
+                        <div class="recorrencia-opcoes">
+                            <label>
+                                <input type="radio" name="tipoTerminoRecorrencia" id="terminoComData" value="data" checked>
+                                Até uma data
+                            </label>
+                            <label>
+                                <input type="radio" name="tipoTerminoRecorrencia" id="terminoSemData" value="sem-data">
+                                Sem data de término
+                            </label>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="dataFim">Ou definir data limite:</label>
-                        <input type="date" id="dataFim" placeholder="Opcional - limite máximo">
+                    <div class="form-group" id="dataFimGroup">
+                        <label for="dataFim">Data limite da recorrência:</label>
+                        <input type="date" id="dataFim">
                     </div>
                 </div>
                 <div class="form-group full-width">
@@ -424,6 +444,195 @@
             </div>
         </div>
 
+        <!-- Seção Fiscal (NFS-e Nacional) -->
+        <div id="fiscal" style="display:none;">
+            <button onclick="mostrarSecao('inicio')" style="margin-bottom:20px;">&larr; Voltar</button>
+            <h2>Configuração Fiscal — NFS-e Nacional</h2>
+
+            <div class="fiscal-banner">
+                <strong>Prévia local.</strong> Nenhum XML é transmitido pelo navegador. A emissão oficial
+                exige backend com certificado digital, assinatura XML e conexão mTLS com a Sefin Nacional.
+            </div>
+
+            <form id="formFiscalConfig" novalidate>
+                <h3>Ambiente</h3>
+                <div class="form-group">
+                    <label for="fiscalAmbiente">Ambiente:</label>
+                    <select id="fiscalAmbiente">
+                        <option value="homologacao">Homologação (produção restrita)</option>
+                        <option value="producao">Produção</option>
+                    </select>
+                </div>
+                <div id="fiscalAvisoProducao" class="fiscal-banner fiscal-banner-perigo" style="display:none;">
+                    Produção exige confirmação explícita e backend seguro. A emissão continua indisponível nesta fase.
+                    <div style="margin-top:8px;">
+                        <input type="checkbox" id="fiscalProducaoConfirmada" style="width:auto;">
+                        <label for="fiscalProducaoConfirmada" style="margin:0;">Confirmo que os dados estão corretos e autorizo o uso em produção.</label>
+                    </div>
+                </div>
+
+                <h3>Prestador</h3>
+                <div class="fiscal-grid">
+                    <div class="form-group">
+                        <label for="fiscalCnpj">CNPJ:</label>
+                        <input type="text" id="fiscalCnpj" placeholder="00.000.000/0000-00" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalIm">Inscrição Municipal:</label>
+                        <input type="text" id="fiscalIm" placeholder="IM">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalRazaoSocial">Razão Social:</label>
+                        <input type="text" id="fiscalRazaoSocial" maxlength="150">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalNomeFantasia">Nome Fantasia:</label>
+                        <input type="text" id="fiscalNomeFantasia" maxlength="150">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalEmail">E-mail:</label>
+                        <input type="email" id="fiscalEmail" maxlength="80">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalTelefone">Telefone (DDD + número):</label>
+                        <input type="tel" id="fiscalTelefone" placeholder="11999999999" inputmode="numeric">
+                    </div>
+                </div>
+
+                <h3>Endereço do Prestador</h3>
+                <div class="fiscal-grid">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="fiscalLogradouro">Logradouro:</label>
+                        <input type="text" id="fiscalLogradouro" maxlength="255">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalNumero">Número:</label>
+                        <input type="text" id="fiscalNumero" maxlength="60">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalComplemento">Complemento:</label>
+                        <input type="text" id="fiscalComplemento" maxlength="156">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalBairro">Bairro:</label>
+                        <input type="text" id="fiscalBairro" maxlength="60">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalMunicipio">Código IBGE do Município:</label>
+                        <input type="text" id="fiscalMunicipio" placeholder="7 dígitos" inputmode="numeric" maxlength="7">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalUf">UF:</label>
+                        <select id="fiscalUf"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalCep">CEP:</label>
+                        <input type="text" id="fiscalCep" placeholder="00000000" inputmode="numeric" maxlength="9">
+                    </div>
+                </div>
+
+                <h3>Regime Tributário</h3>
+                <div class="fiscal-grid">
+                    <div class="form-group">
+                        <label for="fiscalOpSimpNac">Simples Nacional:</label>
+                        <select id="fiscalOpSimpNac"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalRegApTribSN">Regime de apuração do Simples:</label>
+                        <select id="fiscalRegApTribSN"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalRegEspTrib">Regime especial:</label>
+                        <select id="fiscalRegEspTrib"></select>
+                    </div>
+                </div>
+
+                <h3>Serviço e Numeração</h3>
+                <div class="fiscal-grid">
+                    <div class="form-group">
+                        <label for="fiscalSerie">Série da DPS:</label>
+                        <input type="text" id="fiscalSerie" value="1" maxlength="5" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalNumeroDps">Próximo número da DPS:</label>
+                        <input type="number" id="fiscalNumeroDps" value="1" min="1" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalCTribNac">Código Nacional (cTribNac):</label>
+                        <input type="text" id="fiscalCTribNac" value="040101" maxlength="6" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalCTribMun">Código Municipal (cTribMun):</label>
+                        <input type="text" id="fiscalCTribMun" value="097" maxlength="3" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalCNBS">NBS (9 dígitos):</label>
+                        <input type="text" id="fiscalCNBS" value="123012200" maxlength="9" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalAliquota">Alíquota ISSQN (%):</label>
+                        <input type="text" id="fiscalAliquota" placeholder="ex.: 5.00" inputmode="decimal">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalTribISSQN">Tributação do ISSQN:</label>
+                        <select id="fiscalTribISSQN"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalTpRetISSQN">Retenção do ISSQN:</label>
+                        <select id="fiscalTpRetISSQN"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalLocalPrestacao">Local da prestação (IBGE):</label>
+                        <input type="text" id="fiscalLocalPrestacao" placeholder="vazio = município do prestador" maxlength="7" inputmode="numeric">
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label for="fiscalDescricaoServico">Descrição do serviço:</label>
+                        <input type="text" id="fiscalDescricaoServico" value="Serviços médicos especializados" maxlength="1000">
+                    </div>
+                </div>
+
+                <h3>Prévia da DPS</h3>
+                <p style="font-size:13px; color:#666; margin-top:-6px;">
+                    A prévia abaixo serve apenas para conferência dos dados. Ela não é assinada e não tem validade fiscal.
+                    O grupo IBS/CBS ainda não foi implementado; para prestadores não optantes do Simples ele pode ser
+                    exigido a partir de 2026.
+                </p>
+                <div class="fiscal-grid">
+                    <div class="form-group">
+                        <label for="fiscalDataCompetencia">Data de competência:</label>
+                        <input type="date" id="fiscalDataCompetencia">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalValorServico">Valor do serviço (R$):</label>
+                        <input type="text" id="fiscalValorServico" placeholder="0.00" inputmode="decimal">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalTomadorDocumento">Tomador — CPF/CNPJ (opcional):</label>
+                        <input type="text" id="fiscalTomadorDocumento" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalTomadorNome">Tomador — Nome (opcional):</label>
+                        <input type="text" id="fiscalTomadorNome" maxlength="150">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalTomadorEmail">Tomador — E-mail (opcional):</label>
+                        <input type="email" id="fiscalTomadorEmail" maxlength="80">
+                    </div>
+                </div>
+
+                <div class="fiscal-acoes">
+                    <button type="submit">Salvar configuração</button>
+                    <button type="button" id="fiscalGerarPrevia">Validar e gerar prévia</button>
+                    <button type="button" id="fiscalBaixarXml">Baixar XML não assinado</button>
+                    <button type="button" id="fiscalLimpar" class="fiscal-btn-secundario">Limpar configuração</button>
+                    <button type="button" disabled title="Requer backend com certificado digital e assinatura XML">Emitir NFS-e (indisponível)</button>
+                </div>
+            </form>
+
+            <div id="fiscalResultado" class="fiscal-resultado" aria-live="polite"></div>
+            <pre id="fiscalPreview" class="fiscal-preview">Nenhuma prévia gerada.</pre>
+        </div>
+
         <!-- Modal de Cadastro/Edição de Unidade -->
         <div id="modalUnidade" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
             <div style="background: white; padding: 30px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 8px 30px rgba(0,0,0,0.2);">
@@ -465,6 +674,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="src/config.js"></script>
     <script src="src/utils.js"></script>
+    <script src="src/recurrence.js"></script>
+    <script src="src/recurrence-service.js"></script>
+    <script src="src/fiscal/catalog.js"></script>
+    <script src="src/fiscal/config.js"></script>
+    <script src="src/fiscal/validators.js"></script>
+    <script src="src/fiscal/dps.js"></script>
+    <script src="src/fiscal/ui.js"></script>
     <script src="firebase-config.js"></script>
     <script src="app.js"></script>
     <script src="unidades.js"></script>

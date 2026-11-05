@@ -1,0 +1,49 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function ehDono(campoUid) {
+      return autenticado() && resource.data[campoUid] == request.auth.uid;
+    }
+
+    function ehProprioUid(uid) {
+      return autenticado() && request.auth.uid == uid;
+    }
+
+    match /plantoes/{plantaoId} {
+      allow get, list, delete: if ehDono('userId');
+      allow create: if autenticado()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if ehDono('userId')
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /recorrencias/{recorrenciaId} {
+      allow get, list, delete: if ehDono('userId');
+      allow create: if autenticado()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if ehDono('userId')
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /usuarios/{uid} {
+      allow read, create, update, delete: if ehProprioUid(uid);
+    }
+
+    match /users/{uid}/unidades/{unidadeId} {
+      allow read, create, update, delete: if ehProprioUid(uid);
+    }
+
+    match /fiscal_emissoes/{documento} {
+      allow read, write: if false;
+    }
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

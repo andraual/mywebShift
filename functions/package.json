@@ -1,0 +1,20 @@
+{
+  "name": "mywebshift-functions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend fiscal do MyWebShift (NFS-e Nacional) — transmissão real desabilitada",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0",
+    "firebase-functions": "^6.0.0"
+  }
+}

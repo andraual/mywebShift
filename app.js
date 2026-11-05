@@ -15,6 +15,7 @@
             document.getElementById('calendario').style.display = (secao === 'calendario') ? 'block' : 'none';
             document.getElementById('resumo').style.display = (secao === 'resumo') ? 'block' : 'none';
             document.getElementById('consolidado').style.display = (secao === 'consolidado') ? 'block' : 'none';
+            document.getElementById('fiscal').style.display = (secao === 'fiscal') ? 'block' : 'none';
             // Atualiza o calendário ao entrar na tela
             if (secao === 'calendario' && window.atualizarCalendario) {
                 window.atualizarCalendario();
@@ -29,6 +30,9 @@
             if (secao === 'consolidado') {
                 setResumoDefaults();
                 carregarConsolidado();
+            }
+            if (secao === 'fiscal' && window.FiscalUI) {
+                window.FiscalUI.carregar();
             }
             if (secao === 'inicio') {
                 plantaoEditandoId = null;
@@ -156,6 +160,27 @@
             inicializarTema();
         }
 
+        // Materializa progressivamente as ocorrências das séries ativas.
+        // Séries sem data de término usam uma janela limitada (src/recurrence.js).
+        async function garantirOcorrenciasRecorrentes() {
+            const user = firebase.auth().currentUser;
+            if (!user || !window.RecurrenceService) return;
+
+            try {
+                await window.RecurrenceService.garantirOcorrenciasAtivas(db, {
+                    userId: user.uid,
+                    montarOcorrencia: montarDadosOcorrencia,
+                    serverTimestamp: function () {
+                        return firebase.firestore.FieldValue.serverTimestamp();
+                    }
+                });
+            } catch (erro) {
+                // A geração é complementar: falhas não devem impedir a exibição
+                // dos plantões já existentes.
+                console.warn('Não foi possível gerar novas ocorrências recorrentes:', erro);
+            }
+        }
+
         // Função para buscar plantões do Firestore e formatar para o calendário
         async function buscarPlantoes() {
             try {
@@ -169,6 +194,8 @@
                 if (cache.plantoes && Date.now() - cache.timestamp < cache.TTL) {
                     return cache.plantoes;
                 }
+
+                await garantirOcorrenciasRecorrentes();
 
                 const snapshot = await db.collection("plantoes").where("userId", "==", user.uid).get();
                 const eventos = [];
@@ -791,107 +818,72 @@ local: p.local,
             return `${ano}-${mes}-${dia}`;
         }
 
-        // Função auxiliar para obter a posição da semana no mês (1ª, 2ª, 3ª, 4ª, 5ª)
-        // Função para calcular datas de recorrência
-        function calcularDatasRecorrencia() {
-            const dataValue = document.getElementById('data').value;
-            if (!dataValue) return [];
-
-            // Parse manual para garantir criação em horário local (evita problemas com new Date('YYYY-MM-DD'))
-            const [anoIni, mesIni, diaIni] = dataValue.split('-').map(Number);
-            const dataInicial = new Date(anoIni, mesIni - 1, diaIni);
+        // Monta a regra de recorrência a partir do formulário.
+        // A geração/materialização das ocorrências fica em src/recurrence.js.
+        function obterRegraRecorrenciaFormulario() {
+            const dataInicial = document.getElementById('data').value;
+            if (!dataInicial) return null;
 
             const tipo = document.getElementById('tipoRecorrencia').value;
-            const quantidade = parseInt(document.getElementById('quantidadeRecorrencia').value) || 4;
-            const dataFimInput = document.getElementById('dataFim').value;
-            let dataFim = null;
-            if (dataFimInput) {
-                const [anoF, mesF, diaF] = dataFimInput.split('-').map(Number);
-                dataFim = new Date(anoF, mesF - 1, diaF);
-            }
+            const semData = document.getElementById('terminoSemData') &&
+                document.getElementById('terminoSemData').checked;
+            const dataFim = semData ? null : document.getElementById('dataFim').value;
 
-            const hoje = new Date();
-            hoje.setHours(0, 0, 0, 0); // Remove horário para comparar apenas datas
-            
-            const datas = [];
-            const diaSemana = dataInicial.getDay(); // 0=Domingo, 1=Segunda, etc.
+            return {
+                dataInicial: dataInicial,
+                dataFim: dataFim,
+                tipo: tipo,
+                excecoes: [],
+                geradoAte: null
+            };
+        }
 
-            // Helper para clonar apenas a parte da data (sem horário)
-            const cloneDateOnly = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        // Mantido para o preview da interface e compatibilidade com chamadas existentes.
+        function calcularDatasRecorrencia() {
+            const regra = obterRegraRecorrenciaFormulario();
+            if (!regra || !window.Recurrence) return [];
 
-            if (tipo === 'semanal') {
-                // Semanal: toda semana no mesmo dia
-                let dataAtual = cloneDateOnly(dataInicial);
-                
-                for (let i = 0; i < quantidade; i++) {
-                    if (dataFim && dataAtual > dataFim) break;
-                    if (dataAtual >= hoje) {
-                        datas.push(cloneDateOnly(dataAtual));
-                    }
-                    dataAtual.setDate(dataAtual.getDate() + 7);
-                }
-                
-            } else if (tipo === 'quinzenal') {
-                // Quinzenal: semana sim, semana não (a cada 14 dias)
-                let dataAtual = cloneDateOnly(dataInicial);
-                
-                for (let i = 0; i < quantidade; i++) {
-                    if (dataFim && dataAtual > dataFim) break;
-                    if (dataAtual >= hoje) {
-                        datas.push(cloneDateOnly(dataAtual));
-                    }
-                    dataAtual.setDate(dataAtual.getDate() + 14);
-                }
-                  } else if (tipo === 'mensal') {
-                // Mensal: mesma posição da semana no mês (ex: toda 3ª quarta-feira)
-                const posicaoSemana = window.Utils.obterPosicaoSemanaNoMes(dataInicial);
-                let mesAtual = dataInicial.getMonth();
-                let anoAtual = dataInicial.getFullYear();
-                let plantoesCriados = 0;
-                
-                // Primeiro, adiciona a data inicial se for válida e dentro do limite
-                if (dataInicial >= hoje && (!dataFim || dataInicial <= dataFim)) {
-                    datas.push(cloneDateOnly(dataInicial));
-                    plantoesCriados++;
-                }
-                
-                // Avança para o próximo mês
-                mesAtual++;
-                if (mesAtual > 11) {
-                    mesAtual = 0;
-                    anoAtual++;
-                }
-                
-                // Continua criando os plantões restantes
-                while (plantoesCriados < quantidade) {
-                    const dataCalculada = window.Utils.obterDataPorPosicaoSemana(anoAtual, mesAtual, diaSemana, posicaoSemana);
-                    
-                    if (!dataCalculada) {
-                        // Se não existe esta posição no mês (ex: 5ª segunda), pula para o próximo mês
-                        mesAtual++;
-                        if (mesAtual > 11) {
-                            mesAtual = 0;
-                            anoAtual++;
-                        }
-                        continue;
-                    }
-                    
-                    if (dataFim && dataCalculada > dataFim) break;
-                    
-                    datas.push(cloneDateOnly(dataCalculada));
-                    plantoesCriados++;
-                    
-                    // Avança para o próximo mês
-                    mesAtual++;
-                    if (mesAtual > 11) {
-                        mesAtual = 0;
-                        anoAtual++;
-                    }
-                }
-            }
-            
-            return datas;
-        }let plantaoEditandoId = null;
+            const resultado = window.Recurrence.gerarOcorrencias(regra, {
+                hoje: new Date(),
+                incluirPassadas: false
+            });
+
+            return resultado.datas
+                .map(function (data) { return window.Recurrence.parseDataISO(data); })
+                .filter(Boolean);
+        }
+
+        // Monta os dados de uma ocorrência a partir da série (ou dos dados-base no cadastro).
+        function montarDadosOcorrencia(base, dataISO, userId) {
+            const valorHoraData = window.Utils.calcularValorHoraPara(
+                base.local,
+                dataISO,
+                base.valorHora,
+                base.valorHoraFimSemana
+            );
+            const calculo = window.Utils.calcularValorTotal(
+                valorHoraData,
+                base.tempoPlantao,
+                base.valorCheio,
+                base.valorBonus
+            );
+
+            return {
+                data: dataISO,
+                horaInicio: base.horaInicio,
+                tempoPlantao: base.tempoPlantao,
+                local: base.local,
+                valorHora: calculo.valorHora,
+                valorCheio: base.valorCheio != null ? base.valorCheio : null,
+                valorBonus: base.valorBonus != null ? base.valorBonus : null,
+                valorTotal: calculo.valorTotal,
+                observacoes: [base.observacoes, '(Recorrente)'].filter(Boolean).join(' '),
+                userId: userId,
+                recorrente: true
+            };
+        }
+
+        let plantaoEditandoId = null;
         let origemEdicao = null; // Variável para armazenar a origem da edição
         
         async function editarPlantao(id, origem) {
@@ -1017,49 +1009,55 @@ local: p.local,
                 } else {
                     // Modo criação - verifica recorrência
                     if (recorrenteCheck) {
-                        const datas = calcularDatasRecorrencia();
-                        let plantoesCriados = 0;
-                        
-                        const localOption = document.getElementById('local').selectedOptions[0];
-                        const vhFds = localOption ? localOption.dataset.valorHoraFimSemana : undefined;
-
-                        for (const dataPlantao of datas) {
-                            const dataFormatada = formatarDataISO(dataPlantao);
-                            
-                            // Recalcula valor por hora para cada data (regra de fds centralizada)
-                            let valorHoraData = valorHoraFinal;
-                            if (!valorCheioCheck) {
-                                valorHoraData = window.Utils.calcularValorHoraPara(local, dataFormatada, valorHoraFinal, vhFds);
-                            }
-
-                            const calcData = window.Utils.calcularValorTotal(
-                                valorHoraData,
-                                tempoPlantao,
-                                valorCheioCheck ? valorCheio : null,
-                                bonusValor
-                            );
-
-                            const plantao = {
-                                data: dataFormatada,
-                                horaInicio,
-                                tempoPlantao,
-                                local,
-                                valorHora: calcData.valorHora,
-                                valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
-                                valorBonus: bonusCheck && valorBonus ? Number(valorBonus) : null,
-                                valorTotal: calcData.valorTotal,
-                                observacoes: [observacoes, '(Recorrente)'].filter(Boolean).join(' '),
-                                userId: user.uid
-                            };
-
-                            await db.collection("plantoes").add(plantao);
-                            plantoesCriados++;
+                        if (!window.Recurrence || !window.RecurrenceService) {
+                            mostrarErro('Módulo de recorrência não carregado. Recarregue a página e tente novamente.');
+                            return;
                         }
-                        
+
+                        const regra = obterRegraRecorrenciaFormulario();
+                        const validacaoRegra = window.Recurrence.validarRegra(regra);
+                        if (!validacaoRegra.valido) {
+                            mostrarErro(validacaoRegra.erros.join('\n'));
+                            return;
+                        }
+
+                        const localOption = document.getElementById('local').selectedOptions[0];
+                        const vhFdsRaw = localOption ? localOption.dataset.valorHoraFimSemana : null;
+                        const valorHoraFimSemana = (vhFdsRaw !== undefined && vhFdsRaw !== null && vhFdsRaw !== '')
+                            ? Number(vhFdsRaw)
+                            : null;
+
+                        const dadosSerie = {
+                            horaInicio: horaInicio,
+                            tempoPlantao: Number(tempoPlantao),
+                            local: local,
+                            valorHora: Number(valorHoraFinal),
+                            valorCheio: valorCheioCheck && valorCheio ? Number(valorCheio) : null,
+                            valorBonus: bonusCheck && valorBonus ? Number(valorBonus) : null,
+                            valorHoraFimSemana: valorHoraFimSemana,
+                            observacoes: observacoes
+                        };
+
+                        const resultado = await window.RecurrenceService.criarSerieRecorrente(db, {
+                            userId: user.uid,
+                            dadosSerie: dadosSerie,
+                            regra: regra,
+                            montarOcorrencia: montarDadosOcorrencia,
+                            serverTimestamp: function () {
+                                return firebase.firestore.FieldValue.serverTimestamp();
+                            }
+                        });
+
+                        const plantoesCriados = resultado.datas.length;
+                        if (!plantoesCriados) {
+                            mostrarErro('Nenhuma ocorrência pôde ser criada para o período informado. Verifique a data inicial e a data limite.');
+                            return;
+                        }
+
                         console.log(`${plantoesCriados} plantões recorrentes cadastrados!`);
                         exibirPopupSucesso(`${plantoesCriados} plantões recorrentes cadastrados com sucesso!`, plantoesCriados);
                         await sincronizarDadosAposSalvar();
-                        
+
                         // Adiciona ano do plantão ao resumo financeiro
                         const anoPlantao = Number(data.split('-')[0]);
                         adicionarAnoAoResumo(anoPlantao);
@@ -1102,12 +1100,17 @@ local: p.local,
                 document.getElementById('bonusGroup').style.display = 'none';
                 document.getElementById('recorrenciaGroup').style.display = 'none';
                 document.getElementById('valorHora').disabled = false;
+                atualizarOpcoesTerminoRecorrencia();
                 const info = document.getElementById('recorrencia-info');
                 if (info) info.remove();
 
             } catch (error) {
                 console.error("Erro ao salvar plantão: ", error);
-                alert("Erro ao salvar plantão. Tente novamente.");
+                if (error && (error.code === 'SEM_OCORRENCIAS' || error.code === 'REGRA_INVALIDA')) {
+                    alert(error.message);
+                } else {
+                    alert("Erro ao salvar plantão. Tente novamente.");
+                }
             }
         });
 
@@ -1292,48 +1295,59 @@ document.getElementById('recorrenteCheck').addEventListener('change', function()
             info.innerHTML = '<strong>📅 Plantão Recorrente:</strong> Serão criados múltiplos plantões baseados na configuração escolhida.';
             recorrenciaGroup.appendChild(info);
         }
+        atualizarOpcoesTerminoRecorrencia();
+        atualizarInfoRecorrencia();
     } else {
         const info = document.getElementById('recorrencia-info');
         if (info) info.remove();
     }
 });
 
-// Atualizar informações da recorrência quando mudar tipo ou quantidade
+// Atualizar informações da recorrência quando mudar tipo ou término
 document.getElementById('tipoRecorrencia').addEventListener('change', atualizarInfoRecorrencia);
-document.getElementById('quantidadeRecorrencia').addEventListener('input', atualizarInfoRecorrencia);
 document.getElementById('dataFim').addEventListener('change', atualizarInfoRecorrencia);
 
-// Validação da quantidade de recorrência
-document.getElementById('quantidadeRecorrencia').addEventListener('input', function() {
-    const valor = parseInt(this.value);
-    if (valor > 52) {
-        this.value = 52;
-        alert('Máximo de 52 repetições permitidas (1 ano)');
-    } else if (valor < 1) {
-        this.value = 1;
+function obterTipoTerminoRecorrencia() {
+    const semData = document.getElementById('terminoSemData');
+    return semData && semData.checked ? 'sem-data' : 'data';
+}
+
+function atualizarOpcoesTerminoRecorrencia() {
+    const grupoDataFim = document.getElementById('dataFimGroup');
+    if (!grupoDataFim) return;
+    grupoDataFim.style.display = obterTipoTerminoRecorrencia() === 'data' ? 'block' : 'none';
+}
+
+['terminoComData', 'terminoSemData'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('change', function () {
+            atualizarOpcoesTerminoRecorrencia();
+            atualizarInfoRecorrencia();
+        });
     }
 });
 
 function atualizarInfoRecorrencia() {
     const info = document.getElementById('recorrencia-info');
     if (!info) return;
-    
+
     const data = document.getElementById('data').value;
     const tipo = document.getElementById('tipoRecorrencia').value;
-    const quantidade = document.getElementById('quantidadeRecorrencia').value;
-    const dataFim = document.getElementById('dataFim').value;
-    
+    const termino = obterTipoTerminoRecorrencia();
+    const dataFim = termino === 'sem-data' ? '' : document.getElementById('dataFim').value;
+
     if (!data) {
         info.innerHTML = '<strong>📅 Plantão Recorrente:</strong> Selecione uma data primeiro.';
         return;
     }
-    
+
     const [anoI, mesI, diaI] = data.split('-').map(Number);
     const dataInicial = new Date(anoI, mesI - 1, diaI); // horário local (evita fuso)
     const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const posicoes = ['', '1ª', '2ª', '3ª', '4ª', '5ª'];
     let texto = '<strong>📅 Plantão Recorrente:</strong> ';
-    
+
     if (tipo === 'semanal') {
         texto += `Toda ${diasSemana[dataInicial.getDay()]}`;
     } else if (tipo === 'quinzenal') {
@@ -1342,18 +1356,25 @@ function atualizarInfoRecorrencia() {
         const posicao = window.Utils.obterPosicaoSemanaNoMes(dataInicial);
         texto += `Toda ${posicoes[posicao]} ${diasSemana[dataInicial.getDay()]} do mês`;
     }
-      const datasCalculadas = calcularDatasRecorrencia();
-      if (dataFim) {
+
+    if (termino === 'sem-data') {
+        texto += ' <strong>sem data de término</strong>. As ocorrências serão geradas automaticamente em uma janela limitada de antecedência.';
+    } else if (!dataFim) {
+        texto += ' — informe a data limite.';
+    } else {
         const [anoF2, mesF2, diaF2] = dataFim.split('-').map(Number);
-        const dataLimite = new Date(anoF2, mesF2 - 1, diaF2); // horário local
-        texto += ` até ${window.Utils.formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões)`;
-    } else if (quantidade) {
-        if (datasCalculadas.length > 0) {
-            const ultimaData = datasCalculadas[datasCalculadas.length - 1];
-            texto += ` (${datasCalculadas.length} plantões até ${window.Utils.formatarDataBR(ultimaData)})`;
+        const dataLimite = new Date(anoF2, mesF2 - 1, diaF2);
+
+        if (dataLimite < dataInicial) {
+            texto += ' <span style="color:#c62828;">— a data limite deve ser posterior ou igual à data inicial.</span>';
+        } else {
+            const datasCalculadas = calcularDatasRecorrencia();
+            texto += ` até ${window.Utils.formatarDataBR(dataLimite)} (${datasCalculadas.length} plantões previstos na janela atual)`;
         }
     }
-      // Adiciona preview das próximas datas
+
+    // Adiciona preview das próximas datas
+    const datasCalculadas = calcularDatasRecorrencia();
     if (datasCalculadas.length > 0) {
         texto += '<br><small style="color: #888;">Próximas datas: ';
         const proximasDatas = datasCalculadas.slice(0, 3).map(d => window.Utils.formatarDataBR(d));
@@ -1363,7 +1384,7 @@ function atualizarInfoRecorrencia() {
         }
         texto += '</small>';
     }
-    
+
     info.innerHTML = texto;
 }
 
@@ -1487,23 +1508,167 @@ async function abrirPopupResumo(plantaoId) {
     }
 }
 
-/* --- Adicionada função excluirPlantao --- */
+/* --- Exclusão de plantões (único, somente esta ocorrência ou esta e as futuras) --- */
+function mostrarModalExclusaoSerie(plantaoId) {
+    fecharPopup();
+
+    const confirmacao = `
+        <div class="popup-content" style="text-align: center;">
+            <p style="font-size: 18px; margin-bottom: 8px;">Este plantão faz parte de uma série recorrente.</p>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">O que deseja excluir?</p>
+            <div class="popup-actions" style="grid-template-columns: 1fr; gap: 10px;">
+                <button class="popup-btn" onclick="excluirOcorrenciaIndividual('${plantaoId}')">Somente este evento</button>
+                <button class="popup-btn" onclick="excluirOcorrenciaEFuturas('${plantaoId}')">Este evento e os futuros</button>
+                <button class="popup-btn" onclick="fecharPopup()">Cancelar</button>
+            </div>
+        </div>
+    `;
+
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '50%';
+    modal.style.left = '50%';
+    modal.style.transform = 'translate(-50%, -50%)';
+    modal.style.background = 'white';
+    modal.style.padding = '20px';
+    modal.style.borderRadius = '8px';
+    modal.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+    modal.style.zIndex = '9999';
+    modal.style.width = 'calc(100vw - 40px)';
+    modal.style.maxWidth = '420px';
+    modal.innerHTML = confirmacao;
+    modal.id = 'popupModal';
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'popupBackdrop';
+    backdrop.style.position = 'fixed';
+    backdrop.style.top = '0';
+    backdrop.style.left = '0';
+    backdrop.style.width = '100%';
+    backdrop.style.height = '100%';
+    backdrop.style.background = 'rgba(0,0,0,0.5)';
+    backdrop.style.zIndex = '9998';
+    backdrop.onclick = fecharPopup;
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+}
+
+function obterSecaoParaRetornoExclusao() {
+    const calendario = document.getElementById('calendario');
+    if (calendario && calendario.style.display !== 'none') return 'calendario';
+
+    const resumo = document.getElementById('resumo');
+    if (resumo && resumo.style.display !== 'none') return 'resumo';
+
+    return 'inicio';
+}
+
+async function finalizarExclusaoPlantao() {
+    const secaoRetorno = obterSecaoParaRetornoExclusao();
+    await sincronizarDadosAposSalvar();
+    fecharPopup();
+    mostrarSecao(secaoRetorno);
+}
+
+function mensagemErroExclusao(error) {
+    if (error && error.code === 'SEM_PERMISSAO') return 'Você não pode excluir este plantão.';
+    if (error && error.code === 'NAO_ENCONTRADO') return 'Plantão não encontrado.';
+    if (error && error.code === 'SERIE_NAO_ENCONTRADA') return 'A recorrência deste plantão não foi encontrada.';
+    return 'Erro ao excluir plantão. Tente novamente.';
+}
+
 async function excluirPlantao(plantaoId) {
     try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            alert('Usuário não autenticado!');
+            return;
+        }
+
+        const doc = await db.collection("plantoes").doc(plantaoId).get();
+        if (!doc.exists) {
+            alert('Plantão não encontrado!');
+            return;
+        }
+
+        const plantao = doc.data();
+        if (plantao.userId !== user.uid) {
+            alert('Você não pode excluir este plantão.');
+            return;
+        }
+
+        if (plantao.serieId) {
+            const serieDoc = await db.collection('recorrencias').doc(plantao.serieId).get();
+            if (serieDoc.exists && serieDoc.data().userId === user.uid) {
+                mostrarModalExclusaoSerie(plantaoId);
+                return;
+            }
+        }
+
+        // Plantão único (ou ocorrência legada sem vínculo de série):
+        // mantém o comportamento atual.
         const confirmacao = confirm("Tem certeza que deseja excluir este plantão?");
         if (!confirmacao) return;
 
         await db.collection("plantoes").doc(plantaoId).delete();
-
-        await sincronizarDadosAposSalvar();
-
-        // Remove o popup após exclusão
-        fecharPopup();
-
-        // Redireciona para a tela de bem-vindo
-        mostrarSecao('inicio');
+        await finalizarExclusaoPlantao();
     } catch (error) {
         console.error("Erro ao excluir plantão:", error);
+        alert(mensagemErroExclusao(error));
+    }
+}
+
+async function excluirOcorrenciaIndividual(plantaoId) {
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            alert('Usuário não autenticado!');
+            return;
+        }
+        if (!window.RecurrenceService) {
+            alert('Módulo de recorrência indisponível. Recarregue a página.');
+            return;
+        }
+
+        await window.RecurrenceService.excluirSomenteOcorrencia(db, {
+            plantaoId: plantaoId,
+            userId: user.uid,
+            serverTimestamp: function () {
+                return firebase.firestore.FieldValue.serverTimestamp();
+            }
+        });
+
+        await finalizarExclusaoPlantao();
+    } catch (error) {
+        console.error('Erro ao excluir ocorrência:', error);
+        alert(mensagemErroExclusao(error));
+    }
+}
+
+async function excluirOcorrenciaEFuturas(plantaoId) {
+    try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+            alert('Usuário não autenticado!');
+            return;
+        }
+        if (!window.RecurrenceService) {
+            alert('Módulo de recorrência indisponível. Recarregue a página.');
+            return;
+        }
+
+        await window.RecurrenceService.excluirOcorrenciaEFuturas(db, {
+            plantaoId: plantaoId,
+            userId: user.uid,
+            serverTimestamp: function () {
+                return firebase.firestore.FieldValue.serverTimestamp();
+            }
+        });
+
+        await finalizarExclusaoPlantao();
+    } catch (error) {
+        console.error('Erro ao excluir ocorrências futuras:', error);
+        alert(mensagemErroExclusao(error));
     }
 }
 
@@ -2053,6 +2218,8 @@ function renderizarGraficos(meses, unidades) {
         window.fecharPopup = fecharPopup;
         window.editarPlantao = editarPlantao;
         window.excluirPlantao = excluirPlantao;
+        window.excluirOcorrenciaIndividual = excluirOcorrenciaIndividual;
+        window.excluirOcorrenciaEFuturas = excluirOcorrenciaEFuturas;
         window.abrirPopupResumo = abrirPopupResumo;
         window.carregarConsolidado = carregarConsolidado;
         window.cadastrarPlantaoComData = cadastrarPlantaoComData;

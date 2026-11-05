@@ -97,6 +97,26 @@
         #recorrenciaGroup .form-group {
             margin-bottom: 12px;
         }
+
+        .recorrencia-opcoes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 20px;
+            margin-top: 6px;
+        }
+
+        .recorrencia-opcoes label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: normal;
+            margin: 0;
+        }
+
+        .recorrencia-opcoes input[type="radio"] {
+            width: auto;
+            margin: 0;
+        }
           .recorrencia-info {
             background: rgba(255, 102, 170, 0.05);
             padding: 8px 12px;
@@ -1636,3 +1656,86 @@
         body.printing .resumo-wrapper { overflow: visible !important; }
         body.printing canvas { max-width: 100% !important; }
     }
+
+/* --- Seção Fiscal (NFS-e) --- */
+.fiscal-banner {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-left: 4px solid #ffb300;
+    color: #5d4037;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+.fiscal-banner-perigo {
+    background: #ffebee;
+    border-color: #ffcdd2;
+    border-left-color: #d32f2f;
+    color: #8e1c1c;
+}
+.fiscal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+}
+#fiscal h3 {
+    margin: 24px 0 12px;
+    font-size: 16px;
+}
+.fiscal-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 20px 0;
+}
+.fiscal-acoes button {
+    width: auto;
+    margin: 0;
+}
+.fiscal-btn-secundario {
+    background: #9e9e9e !important;
+}
+.fiscal-resultado {
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.fiscal-resultado:empty {
+    display: none;
+}
+.fiscal-ok { color: #2e7d32; margin: 0 0 8px; }
+.fiscal-erro { color: #c62828; margin: 0 0 6px; font-weight: 600; }
+.fiscal-aviso { color: #b26a00; margin: 8px 0 6px; font-weight: 600; }
+.fiscal-lista { margin: 0 0 10px 20px; padding: 0; }
+.fiscal-lista li { margin-bottom: 3px; }
+.fiscal-preview {
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre;
+    max-height: 520px;
+}
+body.dark-theme .fiscal-preview {
+    background: #1e1e1e;
+    border-color: #333;
+    color: #e0e0e0;
+}
+body.dark-theme .fiscal-banner {
+    background: #3a2f14;
+    border-color: #6d571f;
+    color: #ffe0a3;
+}
+body.dark-theme .fiscal-banner-perigo {
+    background: #3b1d1d;
+    border-color: #6d2a2a;
+    color: #ffb3b3;
+}
+@media (max-width: 640px) {
+    .fiscal-grid { grid-template-columns: 1fr; }
+}
