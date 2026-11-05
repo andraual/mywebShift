@@ -210,11 +210,14 @@
                             start: `${p.data}T${p.horaInicio}`,
                             end: moment(`${p.data}T${p.horaInicio}`).add(horas, 'hours').format('YYYY-MM-DDTHH:mm'),
                             local: p.local,
+                            horaInicio: p.horaInicio,
                             valorHora: window.Utils.numero(p.valorHora),
                             horas: horas,
                             // Prefere valorTotal gravado; senão calcula (tolerante a string/número)
                             total: (p.valorTotal != null ? window.Utils.numero(p.valorTotal) : (window.Utils.numero(p.valorHora) * horas)).toFixed(2),
-                            observacoes: p.observacoes
+                            observacoes: p.observacoes,
+                            serieId: p.serieId || null,
+                            ocorrenciaData: p.ocorrenciaData || p.data
                         });
                     } catch (erro) {
                         console.error('Erro ao processar plantão:', erro);
@@ -316,6 +319,8 @@
                             <p><strong>Total:</strong> R$ ${window.Utils.numero(calEvent.total).toFixed(2)}</p>
                             ${calEvent.observacoes ? `<p><strong>Observações:</strong> ${esc(calEvent.observacoes)}</p>` : ''}
                             <div class="popup-actions">
+                                <button class="popup-btn popup-btn-calendario" onclick="adicionarPlantaoAoCalendario('${calEvent.id}')">📅 Adicionar ao calendário</button>
+                                ${calEvent.serieId ? `<button class="popup-btn popup-btn-calendario" onclick="adicionarSerieAoCalendario('${calEvent.serieId}', '${calEvent.ocorrenciaData}')">📅 Adicionar série</button>` : ''}
                                 <button class="popup-btn" onclick="editarPlantao('${calEvent.id}')">✏️ Editar</button>
                                 <button class="popup-btn" onclick="excluirPlantao('${calEvent.id}')">🗑️ Excluir</button>
                                 <button class="popup-btn" onclick="fecharPopup()">Cancelar</button>
@@ -991,10 +996,12 @@ local: p.local,
                         userId: user.uid
                     };
 
-                    await db.collection("plantoes").doc(plantaoEditandoId).update(plantao);
+                    const idAtualizado = plantaoEditandoId;
+                    await db.collection("plantoes").doc(idAtualizado).update(plantao);
                     console.log("Plantão atualizado com sucesso!");
-                    // Guarda última atualização para sugestão de calendário (mobile)
+                    window.__ultimaSerieSalva = null;
                     window.__ultimoPlantaoSalvo = {
+                        id: idAtualizado,
                         data,
                         horaInicio,
                         tempoPlantao: Number(tempoPlantao),
@@ -1054,6 +1061,28 @@ local: p.local,
                             return;
                         }
 
+                        const ocorrenciasSerie = resultado.datas.map(function (dataOcorrencia) {
+                            return {
+                                id: window.Recurrence.idOcorrencia(resultado.serieId, dataOcorrencia),
+                                data: dataOcorrencia,
+                                ocorrenciaData: dataOcorrencia,
+                                serieId: resultado.serieId,
+                                horaInicio: dadosSerie.horaInicio,
+                                tempoPlantao: dadosSerie.tempoPlantao,
+                                local: dadosSerie.local,
+                                observacoes: dadosSerie.observacoes,
+                                valorHora: dadosSerie.valorHora
+                            };
+                        });
+
+                        window.__ultimoPlantaoSalvo = ocorrenciasSerie.find(function (ocorrencia) {
+                            return ocorrencia.data === data;
+                        }) || ocorrenciasSerie[0];
+                        window.__ultimaSerieSalva = {
+                            serieId: resultado.serieId,
+                            ocorrencias: ocorrenciasSerie
+                        };
+
                         console.log(`${plantoesCriados} plantões recorrentes cadastrados!`);
                         exibirPopupSucesso(`${plantoesCriados} plantões recorrentes cadastrados com sucesso!`, plantoesCriados);
                         await sincronizarDadosAposSalvar();
@@ -1076,10 +1105,11 @@ local: p.local,
                             userId: user.uid
                         };
 
-                        await db.collection("plantoes").add(plantao);
+                        const docRef = await db.collection("plantoes").add(plantao);
                         console.log("Plantão cadastrado com sucesso!");
-                        // Guarda última criação para sugestão de calendário (mobile)
+                        window.__ultimaSerieSalva = null;
                         window.__ultimoPlantaoSalvo = {
+                            id: docRef.id,
                             data,
                             horaInicio,
                             tempoPlantao: Number(tempoPlantao),
@@ -1121,13 +1151,15 @@ local: p.local,
                     <p>${mensagem}</p>
                     ${quantidade > 1 ? `<p style="color: #666; font-size: 14px;">Você pode ver todos os plantões no calendário</p>` : ''}
                     <div class="popup-actions">
+                        ${window.__ultimoPlantaoSalvo ? `
+                            <button class="popup-btn popup-btn-calendario" onclick="adicionarUltimoPlantaoAoCalendario()">📅 ${quantidade > 1 ? 'Adicionar este plantão' : 'Adicionar ao calendário'}</button>
+                        ` : ''}
+                        ${window.__ultimaSerieSalva ? `
+                            <button class="popup-btn popup-btn-calendario" onclick="adicionarUltimaSerieAoCalendario()">📅 Adicionar série ao calendário</button>
+                        ` : ''}
                         <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('cadastro');">Novo Plantão</button>
                         <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('calendario');">Ver Calendário</button>
                         <button class="popup-btn" onclick="fecharPopup(); mostrarSecao('inicio');">Início</button>
-                        ${quantidade === 1 && window.isMobileDevice && window.isMobileDevice() && window.__ultimoPlantaoSalvo ? `
-                            <button class="popup-btn" onclick="adicionarAoCalendarioGoogle()">Adicionar no Google Calendar</button>
-                            <button class="popup-btn" onclick="baixarICSPlantao()">Baixar .ics (Apple/Outlook)</button>
-                        ` : ''}
                     </div>
                 </div>
             `;
@@ -1166,6 +1198,170 @@ local: p.local,
             return /Mobi|Android/i.test(navigator.userAgent) || (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
         };
 
+        function gerarConteudoICS(lista, opcoes) {
+            if (!window.ICS) {
+                throw new Error('Módulo de calendário indisponível. Recarregue a página.');
+            }
+
+            const conteudo = window.ICS.gerarCalendarioICS(lista, Object.assign({
+                nomeCalendario: 'MyShift - Plantões'
+            }, opcoes || {}));
+
+            if (!conteudo || conteudo.indexOf('BEGIN:VEVENT') === -1) {
+                throw new Error('Nenhuma ocorrência válida para exportar.');
+            }
+
+            return conteudo;
+        }
+
+        async function compartilharOuBaixarICS(nomeArquivo, conteudo) {
+            const tipo = 'text/calendar;charset=utf-8';
+            let arquivo = null;
+
+            try {
+                arquivo = new File([new Blob([conteudo], { type: tipo })], nomeArquivo, { type: tipo });
+            } catch (erro) {
+                arquivo = null;
+            }
+
+            if (arquivo && navigator.share && navigator.canShare) {
+                try {
+                    if (navigator.canShare({ files: [arquivo] })) {
+                        await navigator.share({
+                            files: [arquivo],
+                            title: 'Adicionar plantão ao calendário'
+                        });
+                        return 'shared';
+                    }
+                } catch (erro) {
+                    if (erro && erro.name === 'AbortError') return 'cancelled';
+                    console.warn('Compartilhamento do arquivo ICS indisponível:', erro);
+                }
+            }
+
+            window.Utils.baixarArquivo(nomeArquivo, conteudo, tipo);
+            return 'downloaded';
+        }
+
+        async function exportarICS(lista, nomeArquivo, opcoes) {
+            try {
+                const conteudo = gerarConteudoICS(lista, opcoes);
+                await compartilharOuBaixarICS(nomeArquivo, conteudo);
+            } catch (erro) {
+                console.error('Erro ao gerar arquivo do calendário:', erro);
+                alert('Não foi possível gerar o arquivo do calendário. O plantão continua salvo no MyShift.');
+            }
+        }
+
+        async function adicionarPlantaoAoCalendario(plantaoId) {
+            try {
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    alert('Usuário não autenticado!');
+                    return;
+                }
+
+                const doc = await db.collection('plantoes').doc(plantaoId).get();
+                if (!doc.exists) {
+                    alert('Plantão não encontrado!');
+                    return;
+                }
+
+                const plantao = doc.data();
+                if (plantao.userId !== user.uid) {
+                    alert('Você não pode adicionar este plantão ao calendário.');
+                    return;
+                }
+
+                await exportarICS(
+                    [Object.assign({ id: doc.id }, plantao)],
+                    window.ICS.nomeArquivoICS(Object.assign({ id: doc.id }, plantao))
+                );
+            } catch (erro) {
+                console.error('Erro ao adicionar plantão ao calendário:', erro);
+                alert('Não foi possível adicionar o plantão ao calendário.');
+            }
+        }
+
+        async function carregarOcorrenciasDaSerie(serieId, dataMinima) {
+            const user = firebase.auth().currentUser;
+            if (!user) throw new Error('Usuário não autenticado');
+
+            const snapshot = await db.collection('plantoes').where('userId', '==', user.uid).get();
+            const lista = [];
+
+            snapshot.forEach(function (doc) {
+                const plantao = doc.data();
+                if (plantao.serieId !== serieId) return;
+
+                const dataOcorrencia = plantao.ocorrenciaData || plantao.data;
+                if (!dataOcorrencia) return;
+                if (dataMinima && dataOcorrencia < dataMinima) return;
+
+                lista.push(Object.assign({ id: doc.id }, plantao));
+            });
+
+            lista.sort(function (a, b) {
+                return String(a.data || a.ocorrenciaData).localeCompare(String(b.data || b.ocorrenciaData));
+            });
+
+            return lista.slice(0, 200);
+        }
+
+        async function adicionarSerieAoCalendario(serieId, dataMinima) {
+            try {
+                if (!window.ICS) {
+                    alert('Módulo de calendário indisponível. Recarregue a página.');
+                    return;
+                }
+
+                const lista = await carregarOcorrenciasDaSerie(serieId, dataMinima);
+                if (!lista.length) {
+                    alert('Nenhuma ocorrência disponível para adicionar ao calendário.');
+                    return;
+                }
+
+                await exportarICS(
+                    lista,
+                    window.ICS.nomeArquivoICS(lista[0], 'serie'),
+                    { nomeCalendario: 'MyShift - Série de Plantões' }
+                );
+            } catch (erro) {
+                console.error('Erro ao adicionar série ao calendário:', erro);
+                alert('Não foi possível adicionar a série ao calendário.');
+            }
+        }
+
+        window.adicionarUltimoPlantaoAoCalendario = function() {
+            const plantao = window.__ultimoPlantaoSalvo;
+            if (!window.ICS) {
+                alert('Módulo de calendário indisponível. Recarregue a página.');
+                return;
+            }
+            if (!plantao) {
+                alert('Nenhum plantão encontrado para adicionar.');
+                return;
+            }
+            void exportarICS([plantao], window.ICS.nomeArquivoICS(plantao));
+        };
+
+        window.adicionarUltimaSerieAoCalendario = function() {
+            const serie = window.__ultimaSerieSalva;
+            if (!window.ICS) {
+                alert('Módulo de calendário indisponível. Recarregue a página.');
+                return;
+            }
+            if (!serie || !serie.ocorrencias || !serie.ocorrencias.length) {
+                alert('Nenhuma ocorrência encontrada para adicionar.');
+                return;
+            }
+            void exportarICS(
+                serie.ocorrencias.slice(0, 200),
+                window.ICS.nomeArquivoICS(serie.ocorrencias[0], 'serie'),
+                { nomeCalendario: 'MyShift - Série de Plantões' }
+            );
+        };
+
         // Formata datas para Google Calendar (UTC)
         function formatGoogleDates(plantao) {
             const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
@@ -1186,45 +1382,10 @@ local: p.local,
             window.open(url, '_blank');
         };
 
-        // Escapa texto para o formato ICS (vírgula, ponto e vírgula, barra e nova linha)
-        function escaparICS(texto) {
-            return String(texto || '')
-                .replace(/\\/g, '\\\\')
-                .replace(/;/g, '\\;')
-                .replace(/,/g, '\\,')
-                .replace(/\r?\n/g, '\\n');
-        }
-
         // Gera conteúdo ICS para um plantão OU uma lista de plantões (um VEVENT cada)
         function gerarICSConteudo(entrada) {
             const lista = Array.isArray(entrada) ? entrada : [entrada];
-            const now = new Date();
-            const fmt = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-            const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//mywebShift//EN'];
-
-            lista.forEach((plantao, idx) => {
-                if (!plantao || !plantao.data || !plantao.horaInicio) return;
-                const uid = `${Date.now()}-${idx}-${Math.random().toString(36).slice(2)}@mywebshift`;
-                const horas = window.Utils.numero(plantao.tempoPlantao);
-                const start = new Date(`${plantao.data}T${plantao.horaInicio}`);
-                const end = new Date(start.getTime() + horas * 60 * 60 * 1000);
-                const local = plantao.local || 'Plantão';
-                const descricao = `Horas: ${horas}\nValor/hora: R$ ${window.Utils.numero(plantao.valorHora)}${plantao.observacoes ? `\nObs: ${plantao.observacoes}` : ''}`;
-                lines.push(
-                    'BEGIN:VEVENT',
-                    `UID:${uid}`,
-                    `DTSTAMP:${fmt(now)}`,
-                    `DTSTART:${fmt(start)}`,
-                    `DTEND:${fmt(end)}`,
-                    `SUMMARY:${escaparICS('Plantão - ' + local)}`,
-                    `DESCRIPTION:${escaparICS(descricao)}`,
-                    `LOCATION:${escaparICS(local)}`,
-                    'END:VEVENT'
-                );
-            });
-
-            lines.push('END:VCALENDAR');
-            return lines.join('\r\n');
+            return gerarConteudoICS(lista, { nomeCalendario: 'MyShift - Plantões' });
         }
 
         // Compatibilidade: gera ICS de um único plantão
@@ -1236,9 +1397,7 @@ local: p.local,
         window.baixarICSPlantao = function() {
             const p = window.__ultimoPlantaoSalvo;
             if (!p) { alert('Nenhum plantão encontrado para adicionar.'); return; }
-            const ics = gerarICS(p);
-            const nome = `plantao_${p.data}_${(p.local || 'local').replace(/\s+/g, '_')}.ics`;
-            window.Utils.baixarArquivo(nome, ics, 'text/calendar;charset=utf-8');
+            void exportarICS([p], window.ICS.nomeArquivoICS(p));
         };
 
         // Função para fechar o popup
@@ -1482,7 +1641,9 @@ async function abrirPopupResumo(plantaoId) {
                 <p><strong>Valor por Hora:</strong> ${window.Utils.toBRL(plantao.valorHora)}</p>
                 <p><strong>Valor Total:</strong> ${window.Utils.toBRL(plantao.valorTotal)}</p>
                 <p><strong>Observações:</strong> ${esc(plantao.observacoes || 'Nenhuma')}</p>
-                ${!isContador ? `<button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
+                ${!isContador ? `<button class="popup-btn popup-btn-calendario" onclick="adicionarPlantaoAoCalendario('${plantaoId}')">📅 Adicionar ao calendário</button>
+                ${plantao.serieId ? `<button class="popup-btn popup-btn-calendario" onclick="adicionarSerieAoCalendario('${plantao.serieId}', '${plantao.ocorrenciaData || plantao.data}')">📅 Adicionar série ao calendário</button>` : ''}
+                <button onclick="editarPlantao('${plantaoId}', 'resumo')">✏️ Editar</button>
                 <button onclick="excluirPlantao('${plantaoId}')">🗑️ Excluir</button>` : ''}
                 <button onclick="fecharPopup()">Cancelar</button>
             </div>
@@ -2221,6 +2382,8 @@ function renderizarGraficos(meses, unidades) {
         window.excluirOcorrenciaIndividual = excluirOcorrenciaIndividual;
         window.excluirOcorrenciaEFuturas = excluirOcorrenciaEFuturas;
         window.abrirPopupResumo = abrirPopupResumo;
+        window.adicionarPlantaoAoCalendario = adicionarPlantaoAoCalendario;
+        window.adicionarSerieAoCalendario = adicionarSerieAoCalendario;
         window.carregarConsolidado = carregarConsolidado;
         window.cadastrarPlantaoComData = cadastrarPlantaoComData;
         // atualizarCalendario já está em window (definida na linha 251)
